@@ -18,12 +18,23 @@
 		85582810B4084E3AAD9F3649 /* Walk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6FD69672AC4AF1881C2450 /* Walk.swift */; };
 		9CB9A24284BA4D3CA4CD8212 /* Waypoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220EFE1B24BE473280CEC266 /* Waypoint.swift */; };
 		A3CA67DF8F1D431CA432C72C /* WalkSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F5431F9C9F4734B5024000 /* WalkSession.swift */; };
+		AABB04223344556677889903 /* RouteDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB03223344556677889902 /* RouteDataTests.swift */; };
 		CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */; };
 		E1216741642A4EF5BBE999CA /* walkB.json in Resources */ = {isa = PBXBuildFile; fileRef = A6F7D1C48AEB4EEE8051CEBF /* walkB.json */; };
 		E263562B9EAE4ACEBA4FF770 /* WaypointTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75DF2887B7C408690FF61EE /* WaypointTestView.swift */; };
 		E2F3C0CA47A64E4B94686FCC /* RecordedAudioPromptPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */; };
 		F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AABB0A223344556677889909 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 45A95EA8490740B19CDCFD54 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2D5D023EA0884F0CB796C6E6;
+			remoteInfo = WayWalkResearch;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		071809EE93CF4FCAA88A8F78 /* walkA.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkA.json; sourceTree = "<group>"; };
@@ -39,6 +50,8 @@
 		958F0852DDB54F839F691090 /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
 		9DEE9CE353244F379C3DDC72 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A6F7D1C48AEB4EEE8051CEBF /* walkB.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkB.json; sourceTree = "<group>"; };
+		AABB02223344556677889901 /* WayWalkResearchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WayWalkResearchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AABB03223344556677889902 /* RouteDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteDataTests.swift; sourceTree = "<group>"; };
 		D168F585940542C2A28CEFAD /* WayWalkResearchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WayWalkResearchApp.swift; sourceTree = "<group>"; };
 		DC0C53FC31FB4DAF90158A9B /* SpeechPromptPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPromptPlayer.swift; sourceTree = "<group>"; };
 		E5384E4CF84A49A7AA85AD10 /* InformationLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InformationLevel.swift; sourceTree = "<group>"; };
@@ -47,6 +60,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		AABB07223344556677889906 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F201E5CC2E92413384824144 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -90,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				F6E0BCA344174D17B510C76F /* WayWalkResearch.app */,
+				AABB02223344556677889901 /* WayWalkResearchTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -109,6 +130,14 @@
 			path = WayWalkResearch;
 			sourceTree = "<group>";
 		};
+		AABB05223344556677889904 /* WayWalkResearchTests */ = {
+			isa = PBXGroup;
+			children = (
+				AABB03223344556677889902 /* RouteDataTests.swift */,
+			);
+			path = WayWalkResearchTests;
+			sourceTree = "<group>";
+		};
 		BD393214DB6740AD8D4D765C /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -123,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				966FECB3D01A46A68ECB007F /* WayWalkResearch */,
+				AABB05223344556677889904 /* WayWalkResearchTests */,
 				821D74285D0241A8A14EF208 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -157,6 +187,24 @@
 			productReference = F6E0BCA344174D17B510C76F /* WayWalkResearch.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AABB01223344556677889900 /* WayWalkResearchTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AABB0D223344556677889C0C /* Build configuration list for PBXNativeTarget "WayWalkResearchTests" */;
+			buildPhases = (
+				AABB06223344556677889905 /* Sources */,
+				AABB07223344556677889906 /* Frameworks */,
+				AABB08223344556677889907 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AABB09223344556677889908 /* PBXTargetDependency */,
+			);
+			name = WayWalkResearchTests;
+			productName = WayWalkResearchTests;
+			productReference = AABB02223344556677889901 /* WayWalkResearchTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -169,6 +217,10 @@
 				TargetAttributes = {
 					2D5D023EA0884F0CB796C6E6 = {
 						CreatedOnToolsVersion = 15.2;
+					};
+					AABB01223344556677889900 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = 2D5D023EA0884F0CB796C6E6;
 					};
 				};
 			};
@@ -186,6 +238,7 @@
 			projectRoot = "";
 			targets = (
 				2D5D023EA0884F0CB796C6E6 /* WayWalkResearch */,
+				AABB01223344556677889900 /* WayWalkResearchTests */,
 			);
 		};
 /* End PBXProject section */
@@ -198,6 +251,13 @@
 				75FE6DFF67D944C4A97CC7A4 /* walkA.json in Resources */,
 				E1216741642A4EF5BBE999CA /* walkB.json in Resources */,
 				332201BF0DEC415FA0C625E8 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AABB08223344556677889907 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,7 +284,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AABB06223344556677889905 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AABB04223344556677889903 /* RouteDataTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AABB09223344556677889908 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2D5D023EA0884F0CB796C6E6 /* WayWalkResearch */;
+			targetProxy = AABB0A223344556677889909 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		275D89F3E42B4EE9943555ED /* Debug */ = {
@@ -282,6 +358,42 @@
 			};
 			name = Debug;
 		};
+		AABB0B223344556677889A0A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cswalk.waywalkresearchtests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WayWalkResearch.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WayWalkResearch";
+			};
+			name = Debug;
+		};
+		AABB0C223344556677889B0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cswalk.waywalkresearchtests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WayWalkResearch.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WayWalkResearch";
+			};
+			name = Release;
+		};
 		B827E3146CA5479FAC96571A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -335,6 +447,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		AABB0D223344556677889C0C /* Build configuration list for PBXNativeTarget "WayWalkResearchTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AABB0B223344556677889A0A /* Debug */,
+				AABB0C223344556677889B0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C4E91A56AB3B4E07AE5328E7 /* Build configuration list for PBXNativeTarget "WayWalkResearch" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

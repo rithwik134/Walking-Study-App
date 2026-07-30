@@ -2,7 +2,7 @@
   {
     "id": "b1",
     "order": 1,
-    "name": "Waypoint b1",
+    "name": "1",
     "latitude": 51.5268,
     "longitude": -0.130087,
     "triggerRadius": 5,
@@ -12,7 +12,7 @@
   {
     "id": "b2",
     "order": 2,
-    "name": "Waypoint b2",
+    "name": "2",
     "latitude": 51.527241,
     "longitude": -0.130506,
     "triggerRadius": 5,
@@ -22,7 +22,7 @@
   {
     "id": "b3",
     "order": 3,
-    "name": "Waypoint b3",
+    "name": "3",
     "latitude": 51.528292,
     "longitude": -0.131949,
     "triggerRadius": 5,
@@ -32,7 +32,7 @@
   {
     "id": "b4",
     "order": 4,
-    "name": "Waypoint b4",
+    "name": "4",
     "latitude": 51.528023,
     "longitude": -0.132576,
     "triggerRadius": 5,
@@ -42,7 +42,7 @@
   {
     "id": "b5",
     "order": 5,
-    "name": "Waypoint b5",
+    "name": "5",
     "latitude": 51.526868,
     "longitude": -0.132549,
     "triggerRadius": 5,
@@ -52,7 +52,7 @@
   {
     "id": "b6",
     "order": 6,
-    "name": "Waypoint b6",
+    "name": "6",
     "latitude": 51.5265,
     "longitude": -0.133577,
     "triggerRadius": 5,
@@ -62,7 +62,7 @@
   {
     "id": "b7",
     "order": 7,
-    "name": "Waypoint b7",
+    "name": "7",
     "latitude": 51.526398,
     "longitude": -0.133853,
     "triggerRadius": 5,
@@ -72,7 +72,7 @@
   {
     "id": "b8",
     "order": 8,
-    "name": "Waypoint b8",
+    "name": "8",
     "latitude": 51.526096,
     "longitude": -0.13351,
     "triggerRadius": 5,
@@ -82,7 +82,7 @@
   {
     "id": "b9",
     "order": 9,
-    "name": "Waypoint b9",
+    "name": "9",
     "latitude": 51.524674,
     "longitude": -0.132067,
     "triggerRadius": 5,
@@ -92,7 +92,7 @@
   {
     "id": "b10",
     "order": 10,
-    "name": "Waypoint b10",
+    "name": "10",
     "latitude": 51.524963,
     "longitude": -0.131098,
     "triggerRadius": 8,
@@ -102,7 +102,7 @@
   {
     "id": "b11",
     "order": 11,
-    "name": "Waypoint b11",
+    "name": "11",
     "latitude": 51.524472,
     "longitude": -0.130465,
     "triggerRadius": 5,
@@ -112,7 +112,7 @@
   {
     "id": "b12",
     "order": 12,
-    "name": "Waypoint b12",
+    "name": "12",
     "latitude": 51.523841,
     "longitude": -0.130304,
     "triggerRadius": 5,
@@ -122,7 +122,7 @@
   {
     "id": "b13",
     "order": 13,
-    "name": "Waypoint b13",
+    "name": "13",
     "latitude": 51.523671,
     "longitude": -0.130138,
     "triggerRadius": 5,
@@ -132,7 +132,7 @@
   {
     "id": "b14",
     "order": 14,
-    "name": "Waypoint b14",
+    "name": "14",
     "latitude": 51.523634,
     "longitude": -0.129824,
     "triggerRadius": 5,
@@ -142,7 +142,7 @@
   {
     "id": "b15",
     "order": 15,
-    "name": "Waypoint b15",
+    "name": "15",
     "latitude": 51.52284,
     "longitude": -0.131654,
     "triggerRadius": 8,
@@ -152,7 +152,7 @@
   {
     "id": "b16",
     "order": 16,
-    "name": "Waypoint b16",
+    "name": "16",
     "latitude": 51.522466,
     "longitude": -0.132515,
     "triggerRadius": 5,
@@ -162,7 +162,7 @@
   {
     "id": "b17",
     "order": 17,
-    "name": "Waypoint b17",
+    "name": "17",
     "latitude": 51.524314,
     "longitude": -0.134529,
     "triggerRadius": 5,
