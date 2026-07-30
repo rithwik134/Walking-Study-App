@@ -1,0 +1,172 @@
+[
+  {
+    "id": "a1",
+    "order": 1,
+    "name": "1",
+    "latitude": 51.524315,
+    "longitude": -0.134529,
+    "triggerRadius": 5,
+    "navigationPrompt": "Head south on Gower Street.",
+    "contextualPrompt": "Head south on Gower Street. You are on a moderately busy street with a wide footway and UCL buildings on either side."
+  },
+  {
+    "id": "a2",
+    "order": 2,
+    "name": "2",
+    "latitude": 51.522553,
+    "longitude": -0.132625,
+    "triggerRadius": 5,
+    "navigationPrompt": "Cross the road and turn left onto Torrington Place. ",
+    "contextualPrompt": "Cross the road and turn left onto Torrington Place. This crossing is signalled and intersected by cycleways on either side."
+  },
+  {
+    "id": "a3",
+    "order": 3,
+    "name": "3",
+    "latitude": 51.522655,
+    "longitude": -0.132021,
+    "triggerRadius": 5,
+    "navigationPrompt": "Continue straight.",
+    "contextualPrompt": "Continue straight. You are entering the main UCL campus area, characterised by university buildings, shops and moderate pedestrian activity."
+  },
+  {
+    "id": "a4",
+    "order": 4,
+    "name": "4",
+    "latitude": 51.52297,
+    "longitude": -0.131232,
+    "triggerRadius": 5,
+    "navigationPrompt": "Continue straight.",
+    "contextualPrompt": "Continue straight through Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries."
+  },
+  {
+    "id": "a5",
+    "order": 5,
+    "name": "5",
+    "latitude": 51.523566,
+    "longitude": -0.130377,
+    "triggerRadius": 5,
+    "navigationPrompt": "In 25 metres, turn right into Woburn Square. Follow the path ahead anti-clockwise around the square and return to the entrance.",
+    "contextualPrompt": "In 25 metres, turn right into Woburn Square. Follow the path ahead anti-clockwise around the square and return to the entrance. This is one of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle. "
+  },
+  {
+    "id": "a6",
+    "order": 6,
+    "name": "6",
+    "latitude": 51.523628,
+    "longitude": -0.129824,
+    "triggerRadius": 5,
+    "navigationPrompt": "Exit the park and cross the road to enter Gordon Square.",
+    "contextualPrompt": "Exit the park and cross the road to enter Gordon Square using the zebra crossing. This crossing is intersected by cycleways on either side."
+  },
+  {
+    "id": "a7",
+    "order": 7,
+    "name": "7",
+    "latitude": 51.523855,
+    "longitude": -0.130315,
+    "triggerRadius": 5,
+    "navigationPrompt": "Continue through Gordon Square and take the east exit.",
+    "contextualPrompt": "Continue through Gordon Square following the path to the east exit using the shoreline to your right. This park contains several intersecting pathways. Benches and open grass areas dominate this park."
+  },
+  {
+    "id": "a8",
+    "order": 8,
+    "name": "8",
+    "latitude": 51.524467,
+    "longitude": -0.130465,
+    "triggerRadius": 5,
+    "navigationPrompt": "Exit the park and turn left to continue north along Gordon Square.",
+    "contextualPrompt": "Exit the park and turn left to continue north along Gordon Square. The footway is narrow and meets a cycleway at the corner."
+  },
+  {
+    "id": "a9",
+    "order": 9,
+    "name": "9",
+    "latitude": 51.524938,
+    "longitude": -0.131004,
+    "triggerRadius": 5,
+    "navigationPrompt": "Turn left to continue west along Gordon Square.",
+    "contextualPrompt": "Turn left to continue west along Gordon Square. This mixed-use street combines pedestrian space, seating, tables, planters and a cycleway within the same streetscape. Access to vehicles is prohibited."
+  },
+  {
+    "id": "a10",
+    "order": 10,
+    "name": "10",
+    "latitude": 51.524686,
+    "longitude": -0.131906,
+    "triggerRadius": 5,
+    "navigationPrompt": "Turn right onto Gordon Street, cross the road and continue north.",
+    "contextualPrompt": "Turn right onto Gordon Street, cross the road and continue north using the zebra crossing. This street has a contemporary yellow aesthetic design with wide pedestrian areas, bicycle racks and trees in raised planters."
+  },
+  {
+    "id": "a11",
+    "order": 11,
+    "name": "11",
+    "latitude": 51.526179,
+    "longitude": -0.133547,
+    "triggerRadius": 5,
+    "navigationPrompt": "Cross Euston Road",
+    "contextualPrompt": "Cross Euston Road. This is an unsignalled crossing with four lanes of traffic and high pedestrian levels."
+  },
+  {
+    "id": "a12",
+    "order": 12,
+    "name": "12",
+    "latitude": 51.526401,
+    "longitude": -0.133858,
+    "triggerRadius": 5,
+    "navigationPrompt": "Turn right and cross Melton Street to continue east on Euston Road.",
+    "contextualPrompt": "Turn right and cross Melton Street via the staggered signalled crossing to continue east on Euston Road. This is a major transport corridor. University College Hospital is located in this area."
+  },
+  {
+    "id": "a13",
+    "order": 13,
+    "name": "13",
+    "latitude": 51.52686,
+    "longitude": -0.132509,
+    "triggerRadius": 5,
+    "navigationPrompt": "Turn left and follow the path into Euston Station forecourt.",
+    "contextualPrompt": "Turn left and follow the path into Euston Station forecourt. You are entering Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
+  },
+  {
+    "id": "a14",
+    "order": 14,
+    "name": "14",
+    "latitude": 51.527633,
+    "longitude": -0.133327,
+    "triggerRadius": 8,
+    "navigationPrompt": "Turn right and head east towards the exit to Eversholt Street.",
+    "contextualPrompt": "Turn right and head east towards the exit. Follow the outer shoreline on the left to avoid seating and complex pedestrian movement. Pass the station entrances and commerce towards the steps."
+  },
+  {
+    "id": "a15",
+    "order": 15,
+    "name": "15",
+    "latitude": 51.528168,
+    "longitude": -0.132279,
+    "triggerRadius": 5,
+    "navigationPrompt": "Exit Euston Station forecourt, then turn right.",
+    "contextualPrompt": "Continue down the steps to Eversholt Street, then turn right and proceed south. A bus depot also connects with this street at the signalled crossing coming up on your right."
+  },
+  {
+    "id": "a16",
+    "order": 16,
+    "name": "16",
+    "latitude": 51.527369,
+    "longitude": -0.13097,
+    "triggerRadius": 6,
+    "navigationPrompt": "Coss Eversholt street. Then cross Euston Road using the staggered crossings and continue onto Upper Woburn Place.",
+    "contextualPrompt": "Coss Eversholt street. Then cross Euston Road using the staggered crossings and continue onto Upper Woburn Place. St Pancras New Church is located on the opposite side of Euston Road. The church is a prominent historic landmark in this part of Bloomsbury."
+  },
+  {
+    "id": "a17",
+    "order": 17,
+    "name": "17",
+    "latitude": 51.526782,
+    "longitude": -0.130044,
+    "triggerRadius": 5,
+    "navigationPrompt": "The destination is on your left, UCL Central House.",
+    "contextualPrompt": "The destination is on your left, UCL Central House. Enter up the steps and locate the large circular entrance button on your right."
+  }
+]

@@ -1,0 +1,359 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		08A6AAAC58A64BD78D60D6B5 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 958F0852DDB54F839F691090 /* RouteMapView.swift */; };
+		1421D6C24DDF46B2A8950F51 /* SpeechPromptPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0C53FC31FB4DAF90158A9B /* SpeechPromptPlayer.swift */; };
+		1A2AE7453714412D85928118 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D80C25C1964EBC80BDBED4 /* HomeView.swift */; };
+		332201BF0DEC415FA0C625E8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9DEE9CE353244F379C3DDC72 /* Assets.xcassets */; };
+		34DB20685E804ED5BF48A167 /* InformationLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5384E4CF84A49A7AA85AD10 /* InformationLevel.swift */; };
+		37CBA75B29FE43D28F16C9D6 /* AudioPromptPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A507D8763A453B96FF5FFA /* AudioPromptPlaying.swift */; };
+		4579086CF6B141AFB7873698 /* WayWalkResearchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D168F585940542C2A28CEFAD /* WayWalkResearchApp.swift */; };
+		75FE6DFF67D944C4A97CC7A4 /* walkA.json in Resources */ = {isa = PBXBuildFile; fileRef = 071809EE93CF4FCAA88A8F78 /* walkA.json */; };
+		85582810B4084E3AAD9F3649 /* Walk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6FD69672AC4AF1881C2450 /* Walk.swift */; };
+		9CB9A24284BA4D3CA4CD8212 /* Waypoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220EFE1B24BE473280CEC266 /* Waypoint.swift */; };
+		A3CA67DF8F1D431CA432C72C /* WalkSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F5431F9C9F4734B5024000 /* WalkSession.swift */; };
+		CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */; };
+		E1216741642A4EF5BBE999CA /* walkB.json in Resources */ = {isa = PBXBuildFile; fileRef = A6F7D1C48AEB4EEE8051CEBF /* walkB.json */; };
+		E263562B9EAE4ACEBA4FF770 /* WaypointTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75DF2887B7C408690FF61EE /* WaypointTestView.swift */; };
+		E2F3C0CA47A64E4B94686FCC /* RecordedAudioPromptPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */; };
+		F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		071809EE93CF4FCAA88A8F78 /* walkA.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkA.json; sourceTree = "<group>"; };
+		0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteDataStore.swift; sourceTree = "<group>"; };
+		220EFE1B24BE473280CEC266 /* Waypoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waypoint.swift; sourceTree = "<group>"; };
+		39A507D8763A453B96FF5FFA /* AudioPromptPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPromptPlaying.swift; sourceTree = "<group>"; };
+		42D80C25C1964EBC80BDBED4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		4A6FD69672AC4AF1881C2450 /* Walk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Walk.swift; sourceTree = "<group>"; };
+		5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWalkView.swift; sourceTree = "<group>"; };
+		66F5431F9C9F4734B5024000 /* WalkSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkSession.swift; sourceTree = "<group>"; };
+		80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordedAudioPromptPlayer.swift; sourceTree = "<group>"; };
+		8683C1E53C2E419CB78C44BF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		958F0852DDB54F839F691090 /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
+		9DEE9CE353244F379C3DDC72 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A6F7D1C48AEB4EEE8051CEBF /* walkB.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkB.json; sourceTree = "<group>"; };
+		D168F585940542C2A28CEFAD /* WayWalkResearchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WayWalkResearchApp.swift; sourceTree = "<group>"; };
+		DC0C53FC31FB4DAF90158A9B /* SpeechPromptPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPromptPlayer.swift; sourceTree = "<group>"; };
+		E5384E4CF84A49A7AA85AD10 /* InformationLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InformationLevel.swift; sourceTree = "<group>"; };
+		F6E0BCA344174D17B510C76F /* WayWalkResearch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayWalkResearch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F75DF2887B7C408690FF61EE /* WaypointTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointTestView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F201E5CC2E92413384824144 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		05267C18D91D458AAFBB4EE8 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				42D80C25C1964EBC80BDBED4 /* HomeView.swift */,
+				5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */,
+				958F0852DDB54F839F691090 /* RouteMapView.swift */,
+				F75DF2887B7C408690FF61EE /* WaypointTestView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		052796601312497AA650A3E0 /* Location */ = {
+			isa = PBXGroup;
+			children = (
+				66F5431F9C9F4734B5024000 /* WalkSession.swift */,
+			);
+			path = Location;
+			sourceTree = "<group>";
+		};
+		7B98FA046E594E448BC22DD3 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				39A507D8763A453B96FF5FFA /* AudioPromptPlaying.swift */,
+				DC0C53FC31FB4DAF90158A9B /* SpeechPromptPlayer.swift */,
+				80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		821D74285D0241A8A14EF208 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F6E0BCA344174D17B510C76F /* WayWalkResearch.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		966FECB3D01A46A68ECB007F /* WayWalkResearch */ = {
+			isa = PBXGroup;
+			children = (
+				D168F585940542C2A28CEFAD /* WayWalkResearchApp.swift */,
+				BD393214DB6740AD8D4D765C /* Models */,
+				F2EEEA2EEE5841F4920404EA /* Data */,
+				7B98FA046E594E448BC22DD3 /* Audio */,
+				052796601312497AA650A3E0 /* Location */,
+				05267C18D91D458AAFBB4EE8 /* Views */,
+				9DEE9CE353244F379C3DDC72 /* Assets.xcassets */,
+				8683C1E53C2E419CB78C44BF /* Info.plist */,
+			);
+			path = WayWalkResearch;
+			sourceTree = "<group>";
+		};
+		BD393214DB6740AD8D4D765C /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				220EFE1B24BE473280CEC266 /* Waypoint.swift */,
+				4A6FD69672AC4AF1881C2450 /* Walk.swift */,
+				E5384E4CF84A49A7AA85AD10 /* InformationLevel.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C58A529FF1A142258C936E01 = {
+			isa = PBXGroup;
+			children = (
+				966FECB3D01A46A68ECB007F /* WayWalkResearch */,
+				821D74285D0241A8A14EF208 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F2EEEA2EEE5841F4920404EA /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */,
+				071809EE93CF4FCAA88A8F78 /* walkA.json */,
+				A6F7D1C48AEB4EEE8051CEBF /* walkB.json */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2D5D023EA0884F0CB796C6E6 /* WayWalkResearch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4E91A56AB3B4E07AE5328E7 /* Build configuration list for PBXNativeTarget "WayWalkResearch" */;
+			buildPhases = (
+				601CA0D6EE2C4531ABC8B124 /* Sources */,
+				F201E5CC2E92413384824144 /* Frameworks */,
+				27AEAB2A9A494FDDB0003C7F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WayWalkResearch;
+			productName = WayWalkResearch;
+			productReference = F6E0BCA344174D17B510C76F /* WayWalkResearch.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		45A95EA8490740B19CDCFD54 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1520;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					2D5D023EA0884F0CB796C6E6 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+				};
+			};
+			buildConfigurationList = F0DF49EBFD3E4887A6FF98E5 /* Build configuration list for PBXProject "WayWalkResearch" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C58A529FF1A142258C936E01;
+			productRefGroup = 821D74285D0241A8A14EF208 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2D5D023EA0884F0CB796C6E6 /* WayWalkResearch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		27AEAB2A9A494FDDB0003C7F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				75FE6DFF67D944C4A97CC7A4 /* walkA.json in Resources */,
+				E1216741642A4EF5BBE999CA /* walkB.json in Resources */,
+				332201BF0DEC415FA0C625E8 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		601CA0D6EE2C4531ABC8B124 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4579086CF6B141AFB7873698 /* WayWalkResearchApp.swift in Sources */,
+				9CB9A24284BA4D3CA4CD8212 /* Waypoint.swift in Sources */,
+				85582810B4084E3AAD9F3649 /* Walk.swift in Sources */,
+				34DB20685E804ED5BF48A167 /* InformationLevel.swift in Sources */,
+				CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */,
+				37CBA75B29FE43D28F16C9D6 /* AudioPromptPlaying.swift in Sources */,
+				1421D6C24DDF46B2A8950F51 /* SpeechPromptPlayer.swift in Sources */,
+				E2F3C0CA47A64E4B94686FCC /* RecordedAudioPromptPlayer.swift in Sources */,
+				A3CA67DF8F1D431CA432C72C /* WalkSession.swift in Sources */,
+				1A2AE7453714412D85928118 /* HomeView.swift in Sources */,
+				F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */,
+				08A6AAAC58A64BD78D60D6B5 /* RouteMapView.swift in Sources */,
+				E263562B9EAE4ACEBA4FF770 /* WaypointTestView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		275D89F3E42B4EE9943555ED /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		8D824397D3EE4D00AB845510 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VA37T7Y228;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WayWalkResearch/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cswalk.waywalkresearch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		B827E3146CA5479FAC96571A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VA37T7Y228;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WayWalkResearch/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cswalk.waywalkresearch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F4C5905221E746A984B7CAB1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C4E91A56AB3B4E07AE5328E7 /* Build configuration list for PBXNativeTarget "WayWalkResearch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8D824397D3EE4D00AB845510 /* Debug */,
+				B827E3146CA5479FAC96571A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0DF49EBFD3E4887A6FF98E5 /* Build configuration list for PBXProject "WayWalkResearch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				275D89F3E42B4EE9943555ED /* Debug */,
+				F4C5905221E746A984B7CAB1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 45A95EA8490740B19CDCFD54 /* Project object */;
+}

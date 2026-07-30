@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WayWalk Research — Waypoint Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --paper:#EDEFE5; --surface:#FAFAF3; --ink:#182620; --ink-soft:#586359; --line:#C9CDBC;
+    --walkA:#E08A1E; --walkA-soft:#F5E1C4;
+    --walkB:#9A4FC2; --walkB-soft:#EADCF5;
+    --accent: var(--walkA); --accent-soft: var(--walkA-soft);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Work Sans', sans-serif;
+    display:flex; flex-direction:column; height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  [data-walk="B"]{ --accent:var(--walkB); --accent-soft:var(--walkB-soft); }
+
+  .topbar{
+    display:flex; align-items:center; gap:14px; padding:12px 18px;
+    border-bottom:1px solid var(--line); flex:none; flex-wrap:wrap;
+  }
+  .brand{font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em; color:var(--ink-soft); flex:none;}
+  .brand b{color:var(--ink);}
+
+  .walk-switch{display:flex; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px; flex:none;}
+  .walk-switch button{
+    border:none; background:none; padding:8px 16px; border-radius:999px; cursor:pointer;
+    font-family:'Work Sans', sans-serif; font-weight:600; font-size:13px; color:var(--ink-soft);
+  }
+  .walk-switch button.active.a{background:var(--walkA); color:#fff;}
+  .walk-switch button.active.b{background:var(--walkB); color:#fff;}
+
+  .hint{font-size:12px; color:var(--ink-soft); flex:1; min-width:200px;}
+
+  .main{display:flex; flex:1; min-height:0;}
+  #map{flex:1.4; min-width:0;}
+
+  .panel{
+    flex:1; min-width:330px; max-width:430px; display:flex; flex-direction:column;
+    border-left:1px solid var(--line); background:var(--surface); overflow-y:auto;
+  }
+  .panel-section{padding:16px 18px; border-bottom:1px solid var(--line);}
+  .panel-section:last-child{border-bottom:none;}
+  .section-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .section-label .count-tag{
+    background:var(--accent-soft); color:var(--accent); padding:2px 8px; border-radius:999px; font-size:10px;
+  }
+
+  .wp-list{display:flex; flex-direction:column; gap:6px;}
+  .wp-row{
+    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
+    border:1px solid var(--line); background:var(--paper); cursor:pointer; font-size:13px;
+  }
+  .wp-row.selected{border-color:var(--accent); background:var(--accent-soft);}
+  .wp-code{font-family:'IBM Plex Mono', monospace; font-weight:600; width:26px; text-align:center; color:var(--accent); flex:none;}
+  .wp-name-sm{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .wp-actions{display:flex; gap:4px; flex:none;}
+  .wp-actions button{border:none; background:none; color:var(--ink-soft); cursor:pointer; font-size:13px; padding:2px 4px;}
+  .wp-actions button:hover{color:var(--ink);}
+  .empty-note{font-size:12.5px; color:var(--ink-soft); line-height:1.6;}
+
+  label{display:block; font-size:11px; font-family:'IBM Plex Mono', monospace; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-soft); margin:12px 0 6px;}
+  label:first-child{margin-top:0;}
+  .optional-tag{color:var(--ink-soft); font-weight:400; text-transform:none; letter-spacing:0;}
+  input[type=text], input[type=number], textarea{
+    width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+    font-family:'Work Sans', sans-serif; font-size:13.5px; background:var(--paper); color:var(--ink); resize:vertical;
+  }
+  input:focus, textarea:focus{outline:none; border-color:var(--accent);}
+  .coord-readout{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); margin-top:4px;}
+  .radius-row{display:flex; align-items:center; gap:10px;}
+  .radius-row input[type=number]{width:80px;}
+
+  .btn{border:none; border-radius:10px; padding:10px 14px; font-family:'Work Sans', sans-serif; font-weight:600; font-size:13.5px; cursor:pointer;}
+  .btn-primary{background:var(--accent); color:#fff; width:100%;}
+  .btn-ghost{background:none; border:1px solid var(--line); color:var(--ink-soft); width:100%;}
+  .btn-ghost:hover{border-color:var(--ink-soft); color:var(--ink);}
+  .btn-row{display:flex; gap:8px; margin-top:10px;}
+
+  .export-walk{margin-bottom:14px;}
+  .export-walk:last-child{margin-bottom:0;}
+  .export-walk-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600; margin-bottom:6px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .swatch{width:9px;height:9px;border-radius:50%;flex:none;}
+  .swatch.a{background:var(--walkA);} .swatch.b{background:var(--walkB);}
+  textarea.export-out{
+    width:100%; height:130px; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    background:var(--ink); color:#DCE4D8; border:none; border-radius:8px; padding:10px; line-height:1.5;
+  }
+  .export-btn-row{display:flex; gap:6px; margin-top:6px;}
+  .export-btn-row button{flex:1; padding:7px 8px; font-size:12px;}
+  .copy-msg{font-size:11.5px; color:var(--ink-soft); margin-top:6px; min-height:14px;}
+
+  .leaflet-div-icon{background:none; border:none;}
+  .pin{width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,.4); border:2px solid var(--surface);}
+  .pin.a{background:var(--walkA);} .pin.b{background:var(--walkB);}
+  .pin.dim{opacity:0.4; box-shadow:none;}
+  .pin span{transform:rotate(45deg); color:#fff; font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:10px;}
+</style>
+</head>
+<body data-walk="A">
+
+<div class="topbar">
+  <span class="brand"><b>WAYWALK RESEARCH</b> · waypoint picker</span>
+  <div class="walk-switch" id="walkSwitch">
+    <button data-walk="A" class="active a">Walk A</button>
+    <button data-walk="B" class="b">Walk B</button>
+  </div>
+  <span class="hint" id="hintText">Click the map to add waypoints to Walk A, in walking order. Drag any pin to nudge it.</span>
+</div>
+
+<div class="main">
+  <div id="map"></div>
+
+  <div class="panel">
+    <div class="panel-section">
+      <div class="section-label">
+        <span id="listLabel">Walk A waypoints</span>
+        <span class="count-tag" id="wpCount">0</span>
+      </div>
+      <div class="wp-list" id="wpList"></div>
+      <div class="empty-note" id="emptyNote">No waypoints yet for this walk — click the map to place the first one (its start).</div>
+      <div class="btn-row">
+        <button class="btn-ghost" id="undoBtn">Undo last pin</button>
+        <button class="btn-ghost" id="clearBtn">Clear this walk</button>
+      </div>
+    </div>
+
+    <div class="panel-section" id="editorSection" style="display:none;">
+      <div class="section-label">Edit selected waypoint</div>
+      <label>Name</label>
+      <input type="text" id="fName" placeholder="e.g. Torrington Place junction">
+      <div class="coord-readout" id="fCoords"></div>
+
+      <label>Trigger radius (metres)</label>
+      <div class="radius-row">
+        <input type="number" id="fRadius" value="25" min="5" max="200">
+        <span style="font-size:12px;color:var(--ink-soft);">how close before the prompt fires</span>
+      </div>
+
+      <label>Navigation prompt (Condition 1)</label>
+      <textarea id="fNav" rows="3" placeholder="Turn left onto Torrington Place and continue along the pavement."></textarea>
+
+      <label>Contextual prompt <span class="optional-tag">(optional — Condition 2 only)</span></label>
+      <textarea id="fContext" rows="3" placeholder="You are entering the main UCL campus area, characterised by university buildings and moderate pedestrian activity."></textarea>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Export</div>
+      <button class="btn btn-primary" id="exportBtn">Generate walkA.json + walkB.json</button>
+      <div id="exportWrap" style="display:none; margin-top:14px;">
+
+        <div class="export-walk">
+          <div class="export-walk-label"><span class="swatch a"></span> walkA.json</div>
+          <textarea class="export-out" id="exportA" readonly></textarea>
+          <div class="export-btn-row">
+            <button class="btn-ghost" id="copyA">Copy</button>
+            <button class="btn-ghost" id="downloadA">Download file</button>
+          </div>
+        </div>
+
+        <div class="export-walk">
+          <div class="export-walk-label"><span class="swatch b"></span> walkB.json</div>
+          <textarea class="export-out" id="exportB" readonly></textarea>
+          <div class="export-btn-row">
+            <button class="btn-ghost" id="copyB">Copy</button>
+            <button class="btn-ghost" id="downloadB">Download file</button>
+          </div>
+        </div>
+
+        <div class="copy-msg" id="copyMsg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const map = L.map('map', {zoomControl:true}).setView([51.5258, -0.1317], 16); // UCL area
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+}).addTo(map);
+
+let walks = { A: [], B: [] };     // each entry: {name, lat, lng, radius, nav, context, marker}
+let selected = { A: null, B: null };
+let activeWalk = 'A';
+let polylines = { A: null, B: null };
+
+const prefix = { A: 'a', B: 'b' };
+const hintByWalk = {
+  A: "Click the map to add waypoints to Walk A, in walking order. Drag any pin to nudge it.",
+  B: "Click the map to add waypoints to Walk B, in walking order. Drag any pin to nudge it."
+};
+
+// Your current route data, loaded from the Xcode project's walkA.json /
+// walkB.json, so this tool opens with your real waypoints already placed —
+// ready to nudge, rather than starting from a blank map.
+const INITIAL_DATA = {
+  "A": [
+    {
+      "name": "1",
+      "lat": 51.524315,
+      "lng": -0.134529,
+      "radius": 5,
+      "nav": "Head south on Gower Street.",
+      "context": "Head south on Gower Street. You are on a moderately busy street with a wide footway and UCL buildings on either side."
+    },
+    {
+      "name": "2",
+      "lat": 51.522553,
+      "lng": -0.132625,
+      "radius": 5,
+      "nav": "Cross the road and turn left onto Torrington Place. ",
+      "context": "Cross the road and turn left onto Torrington Place. This crossing is intersected by cycleways on either side."
+    },
+    {
+      "name": "3",
+      "lat": 51.522655,
+      "lng": -0.132021,
+      "radius": 5,
+      "nav": "Continue straight.",
+      "context": "Continue straight. You are entering the main UCL campus area, characterised by university buildings, shops and moderate pedestrian activity."
+    },
+    {
+      "name": "4",
+      "lat": 51.52297,
+      "lng": -0.131232,
+      "radius": 5,
+      "nav": "Continue straight.",
+      "context": "Continue straight through Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries."
+    },
+    {
+      "name": "5",
+      "lat": 51.523566,
+      "lng": -0.130377,
+      "radius": 5,
+      "nav": "In 25 metres, turn right into Woburn Square. Follow the path around the park and return to the entrance.",
+      "context": "In 25 metres, turn right into Woburn Square. Follow the path around the park and return to the entrance. This is one of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle. "
+    },
+    {
+      "name": "6",
+      "lat": 51.523628,
+      "lng": -0.129824,
+      "radius": 5,
+      "nav": "Exit the park and cross the road to enter Gordon Square.",
+      "context": "Exit the park and cross the road to enter Gordon Square using the zebra crossing. This crossing is intersected by cycleways on either side."
+    },
+    {
+      "name": "7",
+      "lat": 51.523855,
+      "lng": -0.130315,
+      "radius": 5,
+      "nav": "Continue through Gordon Square and take the east exit.",
+      "context": "Continue through Gordon Square following the path to the east exit. This park contains several intersecting pathways with a shoreline route along the south, east and north side. Benches and open grass areas dominate this park."
+    },
+    {
+      "name": "8",
+      "lat": 51.524467,
+      "lng": -0.130465,
+      "radius": 5,
+      "nav": "Exit the park and turn left to continue north along Gordon Square.",
+      "context": "Exit the park and turn left to continue north along Gordon Square along the outer edge. The footway is narrow and meets a cycleway at the corner."
+    },
+    {
+      "name": "9",
+      "lat": 51.524938,
+      "lng": -0.131004,
+      "radius": 5,
+      "nav": "Turn left to continue west along Gordon Square.",
+      "context": "Turn left to continue west along Gordon Square. This mixed-use street combines pedestrian space, seating, tables, planters and a cycleway within the same streetscape. Access to vehicles is prohibited."
+    },
+    {
+      "name": "10",
+      "lat": 51.524686,
+      "lng": -0.131906,
+      "radius": 5,
+      "nav": "Turn right onto Gordon Street, cross the road and continue north.",
+      "context": "Turn right onto Gordon Street, cross the road and continue north using the zebra crossing. This street has a contemporary yellow aesthetic design with wide pedestrian areas, bicycle racks and trees in raised planters."
+    },
+    {
+      "name": "11",
+      "lat": 51.526179,
+      "lng": -0.133547,
+      "radius": 5,
+      "nav": "Cross Euston Road",
+      "context": "Cross Euston Road. This is an unsignalled crossing with four lanes of traffic and high pedestrian levels."
+    },
+    {
+      "name": "12",
+      "lat": 51.526401,
+      "lng": -0.133858,
+      "radius": 5,
+      "nav": "Turn right and cross Melton Street to continue east on Euston Road.",
+      "context": "Turn right and cross Melton Street to continue east on Euston Road. This is a major transport corridor. University College Hospital is located in this area."
+    },
+    {
+      "name": "13",
+      "lat": 51.52686,
+      "lng": -0.132509,
+      "radius": 5,
+      "nav": "Turn left and follow the path into Euston Station forecourt.",
+      "context": "Turn left and follow the path into Euston Station forecourt. You are entering Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
+    },
+    {
+      "name": "14",
+      "lat": 51.527633,
+      "lng": -0.133327,
+      "radius": 8,
+      "nav": "Turn right and head east towards the exit to Eversholt Street.",
+      "context": "Turn right and head east towards the exit. Follow the outer shoreline on the left to avoid seating and complex pedestrian movement. Pass the station entrances and commerce towards the steps."
+    },
+    {
+      "name": "15",
+      "lat": 51.528168,
+      "lng": -0.132279,
+      "radius": 5,
+      "nav": "Exit Euston Station forecourt, then turn right.",
+      "context": "Continue down the steps to Eversholt Street, then turn right and proceed south. A bus depot also connects with this street at the signalled crossing coming up on your right."
+    },
+    {
+      "name": "16",
+      "lat": 51.527369,
+      "lng": -0.13097,
+      "radius": 6,
+      "nav": "Coss Eversholt street. Then cross Euston Road using the staggered crossings and continue onto Upper Woburn Place.",
+      "context": "Coss Eversholt street. Then cross Euston Road using the staggered crossings and continue onto Upper Woburn Place. St Pancras New Church is located on the opposite side of Euston Road. The church is a prominent historic landmark in this part of Bloomsbury."
+    },
+    {
+      "name": "17",
+      "lat": 51.526782,
+      "lng": -0.130044,
+      "radius": 5,
+      "nav": "The destination is on your left, UCL Central House.",
+      "context": "The destination is on your left, UCL Central House. Enter up the steps and locate the large circular entrance button on your right."
+    }
+  ],
+  "B": [
+    {
+      "name": "Waypoint b1",
+      "lat": 51.5268,
+      "lng": -0.130087,
+      "radius": 5,
+      "nav": "Head north on Upper Woburn Place.",
+      "context": "Head north on Upper Woburn Place via the few descending steps. St Pancras New Church is located on your right. The church is a prominent historic landmark in this part of Bloomsbury."
+    },
+    {
+      "name": "Waypoint b2",
+      "lat": 51.527241,
+      "lng": -0.130506,
+      "radius": 5,
+      "nav": "Cross Euston Road using the staggered crossing, then cross Eversholt Street on the left and turn right to continue.",
+      "context": "Cross Euston Road using the staggered crossing, then cross Eversholt Street on the left and turn right to continue. A bus depot also connects with this street at the signalled crossing coming up on your left."
+    },
+    {
+      "name": "Waypoint b3",
+      "lat": 51.528292,
+      "lng": -0.131949,
+      "radius": 5,
+      "nav": "Turn left and proceed to Euston Station forecourt.",
+      "context": "Turn left and proceed to Euston Station forecourt via the ascending steps. You are entering Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
+    },
+    {
+      "name": "Waypoint b4",
+      "lat": 51.528023,
+      "lng": -0.132576,
+      "radius": 5,
+      "nav": "Continue through Euston Station forecourt and then turn left to use the south exit.",
+      "context": "Continue through Euston Station forecourt and then turn left to use the south exit. Follow the outer shoreline on your right to avoid seating and complex pedestrian movement. Pass the station entrance and commerce before turning left onto the path leading south."
+    },
+    {
+      "name": "Waypoint b5",
+      "lat": 51.526868,
+      "lng": -0.132549,
+      "radius": 5,
+      "nav": "Continue along the path turning East along the Euston Road.",
+      "context": "Continue along the path turning East along the Euston Road. A taxi rank is located on your right. University College Hospital is located in this area."
+    },
+    {
+      "name": "Waypoint b6",
+      "lat": 51.5265,
+      "lng": -0.133577,
+      "radius": 5,
+      "nav": "Cross Melton Street and then turn left to cross Euston Road.",
+      "context": "Cross Melton Street and then turn left to cross Euston Road. The crossing is unsignalled. This is a major transport corridor with high traffic volumes and continuous pedestrian movement. "
+    },
+    {
+      "name": "Waypoint b7",
+      "lat": 51.526398,
+      "lng": -0.133853,
+      "radius": 5,
+      "nav": "Cross Euston Road and continue south on Gordon Street.",
+      "context": "Cross Euston Road and continue south on Gordon Street. This area is surrounded by UCL buildings and student services."
+    },
+    {
+      "name": "Waypoint b8",
+      "lat": 51.526096,
+      "lng": -0.13351,
+      "radius": 5,
+      "nav": "Continue south on Gordon Street.",
+      "context": "Continue south on Gordon Street. This street has a contemporary design with wide pedestrian areas, trees and distinctive paving that differs from surrounding streets."
+    },
+    {
+      "name": "Waypoint b9",
+      "lat": 51.524674,
+      "lng": -0.132067,
+      "radius": 5,
+      "nav": "Turn left to continue east along Gordon Square.",
+      "context": "Turn left to continue east along Gordon Square using the zebra crossing. This mixed-use street combines pedestrian space, seating, tables, planters and a cycleway within the same streetscape. Access to vehicles is prohibited."
+    },
+    {
+      "name": "Waypoint b10",
+      "lat": 51.524963,
+      "lng": -0.131098,
+      "radius": 8,
+      "nav": "Turn right to continue south along Gordon Square.",
+      "context": "Turn right to continue south along Gordon Square. A cycleway intersects the corner and the proceeding footway is narrow."
+    },
+    {
+      "name": "Waypoint b11",
+      "lat": 51.524472,
+      "lng": -0.130465,
+      "radius": 5,
+      "nav": "Turn right to enter Gordon Square and follow the path to the south exit.",
+      "context": "Turn right to enter Gordon Square and follow the path to the south exit. Follow the outer path to your left. This park contains several intersecting pathways with a shoreline route along the south, east and north side. The part is characterised by benches and open grass areas."
+    },
+    {
+      "name": "Waypoint b12",
+      "lat": 51.523841,
+      "lng": -0.130304,
+      "radius": 5,
+      "nav": "Exit Gorden Square and cross the road.",
+      "context": "Exit Gorden Square and cross the road using the zebra crossing. This crossing is intersected by cycleways on either side."
+    },
+    {
+      "name": "Waypoint b13",
+      "lat": 51.523671,
+      "lng": -0.130138,
+      "radius": 5,
+      "nav": "Turn left into Woburn Square. Follow the path around the park and return to the entrance.",
+      "context": "Turn left into Woburn Square. Follow the path around the park and return to the entrance. This is one of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle."
+    },
+    {
+      "name": "Waypoint b14",
+      "lat": 51.523634,
+      "lng": -0.129824,
+      "radius": 5,
+      "nav": "When exiting the park, turn left and continue straight.",
+      "context": "When exiting the park, turn left and continue straight through Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries."
+    },
+    {
+      "name": "Waypoint b15",
+      "lat": 51.52284,
+      "lng": -0.131654,
+      "radius": 8,
+      "nav": "Continue straight.",
+      "context": "Continue straight. You are leaving the main UCL campus area and returning to a more conventional streetscape."
+    },
+    {
+      "name": "Waypoint b16",
+      "lat": 51.522466,
+      "lng": -0.132515,
+      "radius": 5,
+      "nav": "Turn right onto Gower Street and head north.",
+      "context": "Turn right onto Gower Street and head north. This crossing is intersected by cycleways on either side."
+    },
+    {
+      "name": "Waypoint b17",
+      "lat": 51.524314,
+      "lng": -0.134529,
+      "radius": 5,
+      "nav": "The destination is on your right, UCL Gower Street.",
+      "context": "The destination is on your right, UCL Gower Street. This is the main entrance of the university."
+    }
+  ]
+};
+
+function codeFor(walk, i){ return `${prefix[walk]}${i+1}`; }
+
+function pinIcon(walk, code, dim){
+  const cls = `pin ${walk.toLowerCase()}${dim ? ' dim' : ''}`;
+  return L.divIcon({ html: `<div class="${cls}"><span>${code}</span></div>`, className:'leaflet-div-icon', iconSize:[26,26], iconAnchor:[13,26] });
+}
+
+/// Creates a marker + waypoint record for `walk` at the given position, wires
+/// up drag/click handlers, and pushes it onto that walk's array. Used both
+/// for brand-new pins (map click) and for pins loaded from existing project
+/// data, so both paths stay in sync.
+function addWaypoint(walk, latlng, opts){
+  const arr = walks[walk];
+  const marker = L.marker(latlng, {icon: pinIcon(walk, codeFor(walk, arr.length), false), draggable:true}).addTo(map);
+  const wp = {
+    name: opts?.name ?? `Waypoint ${codeFor(walk, arr.length)}`,
+    lat: latlng.lat,
+    lng: latlng.lng,
+    radius: opts?.radius ?? 25,
+    nav: opts?.nav ?? '',
+    context: opts?.context ?? '',
+    marker
+  };
+  marker.on('dragend', () => {
+    const ll = marker.getLatLng();
+    wp.lat = ll.lat; wp.lng = ll.lng;
+    redraw(); if(selected[walk] === wp) fillEditor(wp);
+  });
+  marker.on('click', () => selectWaypoint(walk, wp));
+  arr.push(wp);
+  return wp;
+}
+
+map.on('click', e => {
+  const wp = addWaypoint(activeWalk, e.latlng);
+  selectWaypoint(activeWalk, wp);
+  redraw();
+});
+
+function loadInitialData(){
+  ['A','B'].forEach(walk => {
+    (INITIAL_DATA[walk] || []).forEach(wp => {
+      addWaypoint(walk, L.latLng(wp.lat, wp.lng), wp);
+    });
+  });
+  redraw();
+
+  const allCoords = [...walks.A, ...walks.B].map(w => [w.lat, w.lng]);
+  if(allCoords.length){
+    map.fitBounds(allCoords, {padding: [40, 40]});
+  }
+}
+
+
+function redraw(){
+  ['A','B'].forEach(walk => {
+    const arr = walks[walk];
+    arr.forEach((w,i) => {
+      const dim = walk !== activeWalk;
+      w.marker.setIcon(pinIcon(walk, codeFor(walk, i), dim));
+      w.marker.dragging[dim ? 'disable' : 'enable']();
+    });
+    if(polylines[walk]) map.removeLayer(polylines[walk]);
+    if(arr.length > 1){
+      polylines[walk] = L.polyline(arr.map(w => [w.lat,w.lng]), {
+        color: walk === 'A' ? '#E08A1E' : '#9A4FC2',
+        weight:3, opacity: walk === activeWalk ? 0.85 : 0.35
+      }).addTo(map);
+    }
+  });
+
+  document.getElementById('wpCount').textContent = walks[activeWalk].length;
+  document.getElementById('listLabel').textContent = `Walk ${activeWalk} waypoints`;
+  document.getElementById('emptyNote').style.display = walks[activeWalk].length ? 'none' : 'block';
+
+  const list = document.getElementById('wpList');
+  list.innerHTML = '';
+  walks[activeWalk].forEach((w,i) => {
+    const row = document.createElement('div');
+    row.className = 'wp-row' + (w===selected[activeWalk] ? ' selected' : '');
+    row.innerHTML = `<span class="wp-code">${codeFor(activeWalk,i)}</span><span class="wp-name-sm">${w.name}</span>
+      <div class="wp-actions">
+        <button data-act="up" title="Move earlier">▲</button>
+        <button data-act="down" title="Move later">▼</button>
+        <button data-act="del" title="Delete">✕</button>
+      </div>`;
+    row.addEventListener('click', ev => { if(!ev.target.dataset.act) selectWaypoint(activeWalk, w); });
+    row.querySelector('[data-act=up]').addEventListener('click', () => moveWp(i,-1));
+    row.querySelector('[data-act=down]').addEventListener('click', () => moveWp(i,1));
+    row.querySelector('[data-act=del]').addEventListener('click', () => deleteWp(i));
+    list.appendChild(row);
+  });
+}
+
+function moveWp(i, dir){
+  const arr = walks[activeWalk];
+  const j = i + dir;
+  if(j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  redraw();
+}
+
+function deleteWp(i){
+  const arr = walks[activeWalk];
+  map.removeLayer(arr[i].marker);
+  if(selected[activeWalk] === arr[i]) selected[activeWalk] = null;
+  arr.splice(i,1);
+  document.getElementById('editorSection').style.display = selected[activeWalk] ? 'block' : 'none';
+  redraw();
+}
+
+document.getElementById('undoBtn').addEventListener('click', () => {
+  const arr = walks[activeWalk];
+  if(arr.length) deleteWp(arr.length - 1);
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  walks[activeWalk].forEach(w => map.removeLayer(w.marker));
+  walks[activeWalk] = []; selected[activeWalk] = null;
+  document.getElementById('editorSection').style.display = 'none';
+  redraw();
+});
+
+document.getElementById('walkSwitch').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  activeWalk = btn.dataset.walk;
+  document.body.dataset.walk = activeWalk;
+  [...document.getElementById('walkSwitch').children].forEach(b => b.classList.toggle('active', b===btn));
+  document.getElementById('hintText').textContent = hintByWalk[activeWalk];
+  document.getElementById('editorSection').style.display = selected[activeWalk] ? 'block' : 'none';
+  if(selected[activeWalk]) fillEditor(selected[activeWalk]);
+  redraw();
+});
+
+function selectWaypoint(walk, wp){
+  selected[walk] = wp;
+  if(walk === activeWalk){
+    document.getElementById('editorSection').style.display = 'block';
+    fillEditor(wp);
+  }
+  redraw();
+}
+
+function fillEditor(wp){
+  document.getElementById('fName').value = wp.name;
+  document.getElementById('fCoords').textContent = `${wp.lat.toFixed(6)}, ${wp.lng.toFixed(6)}`;
+  document.getElementById('fRadius').value = wp.radius;
+  document.getElementById('fNav').value = wp.nav;
+  document.getElementById('fContext').value = wp.context;
+}
+
+['fName','fRadius','fNav','fContext'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const wp = selected[activeWalk];
+    if(!wp) return;
+    wp.name = document.getElementById('fName').value || wp.name;
+    wp.radius = parseInt(document.getElementById('fRadius').value) || 25;
+    wp.nav = document.getElementById('fNav').value;
+    wp.context = document.getElementById('fContext').value;
+    redraw();
+  });
+});
+
+function buildWalkJson(walk){
+  return walks[walk].map((w,i) => ({
+    id: codeFor(walk, i),
+    order: i+1,
+    name: w.name,
+    latitude: Math.round(w.lat*1e6)/1e6,
+    longitude: Math.round(w.lng*1e6)/1e6,
+    triggerRadius: w.radius,
+    navigationPrompt: w.nav,
+    contextualPrompt: w.context && w.context.trim() ? w.context : null
+  }));
+}
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if(walks.A.length < 2 && walks.B.length < 2){
+    alert('Add at least two waypoints to Walk A and/or Walk B before exporting.');
+    return;
+  }
+  document.getElementById('exportA').value = JSON.stringify(buildWalkJson('A'), null, 2);
+  document.getElementById('exportB').value = JSON.stringify(buildWalkJson('B'), null, 2);
+  document.getElementById('exportWrap').style.display = 'block';
+});
+
+async function copyText(elId, msg){
+  const ta = document.getElementById(elId);
+  ta.select();
+  try{ await navigator.clipboard.writeText(ta.value); }
+  catch(e){ document.execCommand('copy'); }
+  document.getElementById('copyMsg').textContent = msg;
+}
+document.getElementById('copyA').addEventListener('click', () => copyText('exportA', 'Copied walkA.json — replace the file of the same name in your Xcode project\'s Data folder.'));
+document.getElementById('copyB').addEventListener('click', () => copyText('exportB', 'Copied walkB.json — replace the file of the same name in your Xcode project\'s Data folder.'));
+
+function downloadText(elId, filename){
+  const text = document.getElementById(elId).value;
+  const blob = new Blob([text], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+document.getElementById('downloadA').addEventListener('click', () => downloadText('exportA', 'walkA.json'));
+document.getElementById('downloadB').addEventListener('click', () => downloadText('exportB', 'walkB.json'));
+
+loadInitialData();
+</script>
+</body>
+</html>
