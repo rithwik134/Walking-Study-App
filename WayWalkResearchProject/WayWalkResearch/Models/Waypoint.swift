@@ -29,4 +29,30 @@ struct Waypoint: Codable, Identifiable, Equatable {
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
+
+    /// The one script spoken at this waypoint under a given condition,
+    /// falling back to the navigation prompt if no contextual script has been
+    /// written yet.
+    ///
+    /// Lives here rather than in `WalkSession` so the researcher preview
+    /// screens show exactly what will be spoken — if the two derived it
+    /// separately they could quietly disagree.
+    func script(for level: InformationLevel) -> String {
+        switch level {
+        case .navigationOnly:
+            return navigationPrompt
+        case .navigationPlusContext:
+            if let contextualPrompt, !contextualPrompt.isEmpty { return contextualPrompt }
+            return navigationPrompt
+        }
+    }
+
+    /// Filename stem used by `RecordedAudioPromptPlayer` to find this
+    /// waypoint's recording for a given condition.
+    func audioKey(for level: InformationLevel) -> String {
+        switch level {
+        case .navigationOnly: return "\(id)_nav"
+        case .navigationPlusContext: return "\(id)_context"
+        }
+    }
 }

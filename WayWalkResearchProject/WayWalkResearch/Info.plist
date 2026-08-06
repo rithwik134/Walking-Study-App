@@ -20,6 +20,14 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Together these expose the app's Documents folder, where session CSVs
+	     are written, in the Files app and in Finder while tethered. Without
+	     both, recorded study data cannot be retrieved off the device except
+	     through a share sheet. -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>WayWalk Research plays audio prompts based on your location as you walk a predefined route, including while the phone is locked.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -38,7 +46,7 @@
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

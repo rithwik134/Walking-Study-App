@@ -30,20 +30,32 @@ Signing & Capabilities.
 WayWalkResearch.xcodeproj/       ← open this
 WayWalkResearch/
   WayWalkResearchApp.swift       ← app entry point
-  Models/                        ← Waypoint, Walk, InformationLevel
+  Models/                        ← Waypoint, Walk, InformationLevel, SessionEvent, RoutePath
   Data/
-    RouteDataStore.swift         ← loads/persists route JSON
+    RouteDataStore.swift         ← loads route JSON from the app bundle
     walkA.json, walkB.json       ← sample route data — replace with your real route
+    walkA_path.json, walkB_path.json ← precomputed walking paths (see "Routed map lines")
+    RoutePathStore.swift         ← loads the precomputed paths
+    SessionLogger.swift          ← writes one CSV per walk, as it happens
+    SessionStore.swift           ← lists/deletes past session files
   Audio/
     AudioPromptPlaying.swift     ← protocol
     SpeechPromptPlayer.swift     ← speech synthesis (used today)
     RecordedAudioPromptPlayer.swift ← drop-in replacement once you have recordings
   Location/
-    WalkSession.swift            ← geofencing + one-shot triggering engine
+    WalkSession.swift            ← geofencing + one-shot triggering engine + session logging
+  Routing/
+    RoutePathBuilder.swift       ← authoring-time MKDirections path generator
   Views/
-    HomeView.swift                ← Select Walk / Select Information Level / Start
-    ActiveWalkView.swift          ← researcher-facing status screen during a walk
-    RouteMapView.swift            ← MapKit overview of both walks, for checking
+    HomeView.swift                ← Participant / Select Walk / Information Level / Start
+    ActiveWalkView.swift          ← researcher screen during a walk: map, prompt, flags
+    RouteMapView.swift            ← MapKit overview of one walk at a time, for checking
+    WaypointTestView.swift        ← live waypoint test mode
+    SessionsView.swift            ← past session CSVs, with share and delete
+    RoutePathGeneratorView.swift  ← authoring UI for the routed paths
+    Components/
+      WaypointPreviewCard.swift   ← the waypoint detail card shared by all three maps
+      WaypointMapContent.swift    ← waypoints, radii and route line, shared by all three maps
   Assets.xcassets/                ← empty AppIcon slot + AccentColor (add a real icon before App Store submission)
   Info.plist
 waypoint-picker.html              ← browser tool for placing waypoints on a map and exporting walkA.json / walkB.json
@@ -57,10 +69,77 @@ click waypoints onto a real map, set names/radii/prompts, and export
 Drop the exported files into `WayWalkResearch/Data/`, replacing the samples,
 then rebuild.
 
-Route data is copied into the app's Documents directory on first launch, so
-after that, edits to the Documents copy take priority over the bundled
-files — see the in-code comments in `RouteDataStore.swift` for details on
-how to push updated JSON to a device directly without reinstalling.
+Route data is read from the app bundle only — there is no Documents copy and
+no in-app editing, so changing a route always means replacing the JSON and
+rebuilding. If you move or renumber waypoints, regenerate the routed map
+lines too (below).
+
+## Recorded data
+
+Every walk writes a CSV to `Documents/Sessions/` on the device, named
+`WayWalk_<participant>_<walk>_<yyyyMMdd-HHmmss>.csv`. One row per event:
+the session start, each waypoint as it fires, each flag the researcher
+raises, and the session end.
+
+Columns: `session_id, participant_id, walk, information_level, event_index,
+event_type, time_iso, time_local, elapsed_s, region_entry_local,
+waypoint_order, waypoint_id, waypoint_name, latitude, longitude,
+gps_accuracy_m, note`.
+
+Two timing details worth knowing:
+
+- **`time_local` is bare `HH:MM:SS`** in the device's timezone, so waypoint
+  rows paste directly into the `Zone,In,Out` file the WayWalk Analyser
+  expects. `time_iso` carries the full date and UTC offset for the archive.
+- **`region_entry_local` vs `time_local`.** A prompt does not play the
+  instant the geofence is entered — arrival is held for two seconds first.
+  `region_entry_local` is when CoreLocation reported arrival;
+  `time_local` is when the prompt started. Pick whichever matches how you
+  are segmenting the physiological data.
+
+The file is rewritten from scratch after every single event, so if the app
+crashes or iOS terminates it mid-walk, everything up to that moment is
+already on disk.
+
+Three ways to get the files off the device, in rough order of convenience:
+
+1. **Finder**, with the phone plugged into a Mac — the app appears under
+   Files, and its Sessions folder can be dragged straight out.
+2. **Files app** on the phone, under On My iPhone → WayWalk Research.
+3. **Share sheet**, from the walk-complete screen or from Past Sessions
+   (individually or all at once).
+
+Nothing is deleted automatically. Past Sessions is where you remove files
+once they are safely copied.
+
+### Flags
+
+The researcher screen has a large **Flag this moment** button. Pressing it
+stamps and saves the timestamp immediately; a note sheet then opens and is
+entirely optional — dismissing it without typing still leaves a valid,
+timestamped flag. **Undo last flag** retracts a mis-tap, which leaves a
+deliberate gap in `event_index` rather than renumbering, so the record shows
+that something was withdrawn.
+
+## Routed map lines
+
+`walkA_path.json` / `walkB_path.json` hold a precomputed walking path for
+each route, so the maps follow pavements and crossings instead of drawing
+straight lines through buildings. They are committed to the repo and read
+from the app bundle — no network is needed during a walk, and every
+participant sees an identical line.
+
+The line is decoration for the researcher. Navigation ground truth is, and
+remains, the pre-written prompts in the route JSON.
+
+To regenerate after moving waypoints: open **View route map**, pick the walk,
+then the **⋯** menu → **Generate routed path…**. It routes each consecutive
+pair of waypoints in turn (16 requests for a 17-waypoint route, deliberately
+serial — Apple throttles bursts), reports any legs it could not route, and
+hands you a JSON file to share. Put that file in `WayWalkResearch/Data/`,
+make sure it is in the target's Copy Bundle Resources phase, rebuild, and
+**check the drawn line by eye before committing** — Apple's pedestrian data
+does not always include garden paths and internal campus routes.
 
 ## Known iOS constraints
 
@@ -94,6 +173,18 @@ how to push updated JSON to a device directly without reinstalling.
   waypoint, your current position, which waypoint is armed (orange), and
   which have already triggered (green) — useful for fine-tuning waypoint
   positions and radii before real data collection.
+- **Waypoint preview cards.** Tapping a waypoint on any of the three maps
+  opens a card with its number, radius, coordinates and script. The route
+  overview and test mode show *both* conditions side by side for
+  proof-reading; the active walk shows only the one that will actually be
+  spoken. In the two-condition view the opening that the contextual script
+  shares with the navigation prompt is dimmed, so the added context stands
+  out — the scripts are alternatives, never played back to back.
+- **Trigger radii are drawn to true scale** on all three maps. At the radii
+  currently in the route data (mostly 5m) they are sub-pixel until you zoom
+  well in. That is deliberate: seeing their real size against the street is
+  the point, and 5m is well below the GPS noise floor (see Known iOS
+  constraints, and `Waypoint.swift`, which advises 20m or more).
 
 ## Swapping in recorded audio later
 

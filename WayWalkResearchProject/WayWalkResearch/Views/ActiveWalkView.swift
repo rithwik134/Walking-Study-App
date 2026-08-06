@@ -1,53 +1,182 @@
 import SwiftUI
+import MapKit
+import UIKit
 
-/// Shown only to the researcher, briefly, before attention goes back to the
-/// participant. Deliberately sparse — there is nothing to tap during a walk.
-/// A "Debug" toggle reveals a small researcher-only readout panel; hidden by
-/// default so the everyday screen is unchanged.
+/// The researcher's screen during a real walk.
+///
+/// It shows the route as it is actually walked — waypoints, trigger radii and
+/// the routed pavement path — plus the exact script that will be spoken at
+/// the waypoint currently armed, in whichever condition this session is
+/// running. The one thing there is to *do* here is raise a flag: a timestamp
+/// marking a moment worth returning to when the physiological data is
+/// analysed later.
 struct ActiveWalkView: View {
     @ObservedObject var session: WalkSession
+    let walk: Walk
     var onEnd: () -> Void
+
     @State private var showDebug = false
+    @State private var cameraPosition: MapCameraPosition = .automatic
+    @State private var selectedWaypointID: String?
+    @State private var isFollowingWalk = true
+    @State private var noteTarget: FlagNoteTarget?
+    @State private var hasEnded = false
+
+    /// Wraps a flag's event id so it can drive a `.sheet(item:)`.
+    private struct FlagNoteTarget: Identifiable {
+        let id: UUID
+    }
+
+    private static let clockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
+
+    private var selectedIndex: Int? {
+        guard let selectedWaypointID else { return nil }
+        return walk.waypoints.firstIndex { $0.id == selectedWaypointID }
+    }
 
     var body: some View {
-        VStack(spacing: 24) {
-            HStack {
-                Spacer()
-                Button(showDebug ? "Hide Debug" : "Debug") {
-                    showDebug.toggle()
-                }
-                .font(.footnote)
+        Group {
+            if hasEnded {
+                WalkSummaryView(session: session, walk: walk, onDone: onEnd)
+            } else {
+                activeContent
             }
+        }
+        .interactiveDismissDisabled()
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+    }
 
-            Spacer()
+    private var activeContent: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                map
+                    .overlay(alignment: .bottom) {
+                        if let index = selectedIndex {
+                            WaypointPreviewCard(
+                                waypoint: walk.waypoints[index],
+                                index: index,
+                                total: walk.waypoints.count,
+                                display: .only(session.informationLevel),
+                                onDismiss: {
+                                    selectedWaypointID = nil
+                                    isFollowingWalk = true
+                                }
+                            )
+                            .padding(.bottom, 8)
+                        }
+                    }
 
-            Image(systemName: "location.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(.tint)
+                controlPanel
+            }
+            .navigationTitle("Waypoint \(session.currentWaypointNumber) of \(walk.waypoints.count)")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .animation(.easeInOut(duration: 0.2), value: selectedWaypointID)
+        .onAppear { selectFollowedWaypoint() }
+        .onChange(of: session.currentWaypointNumber) { selectFollowedWaypoint() }
+        .onChange(of: selectedWaypointID) { previous, current in
+            if current != nil, current != followedWaypointID, previous != nil {
+                isFollowingWalk = false
+            }
+        }
+        .sheet(item: $noteTarget) { target in
+            FlagNoteSheet(
+                onSave: { note in session.attachNote(note, to: target.id) }
+            )
+        }
+    }
+
+    // MARK: - Map
+
+    private var map: some View {
+        Map(position: $cameraPosition, selection: $selectedWaypointID) {
+            WaypointMapContent(
+                waypoints: walk.waypoints,
+                triggeredIDs: session.triggeredWaypointIDs,
+                activeIndex: session.currentWaypointNumber - 1,
+                selectedID: selectedWaypointID,
+                showRadii: true,
+                routePath: RoutePathStore.shared.polyline(for: walk),
+                pathTint: .blue
+            )
+
+            if let lat = session.currentLatitude, let lng = session.currentLongitude {
+                Annotation("You", coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)) {
+                    Circle()
+                        .fill(.blue)
+                        .frame(width: 14, height: 14)
+                        .overlay(Circle().stroke(.white, lineWidth: 2))
+                }
+            }
+        }
+        .mapStyle(.standard)
+        .frame(maxHeight: .infinity)
+        .onAppear {
+            cameraPosition = .region(
+                MKCoordinateRegion(
+                    center: walk.waypoints.first?.coordinate
+                        ?? CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                    span: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006)
+                )
+            )
+        }
+    }
+
+    private var followedWaypointID: String? {
+        let index = session.currentWaypointNumber - 1
+        guard walk.waypoints.indices.contains(index) else { return nil }
+        return walk.waypoints[index].id
+    }
+
+    private func selectFollowedWaypoint() {
+        guard isFollowingWalk, let id = followedWaypointID else { return }
+        selectedWaypointID = id
+    }
+
+    // MARK: - Controls
+
+    private var controlPanel: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Label(session.informationLevel.rawValue, systemImage: "speaker.wave.2.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(session.informationLevel == .navigationOnly ? .blue : .purple)
+                Spacer()
+                Button(showDebug ? "Hide Debug" : "Debug") { showDebug.toggle() }
+                    .font(.footnote)
+            }
 
             Text(session.statusMessage)
-                .font(.title3)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            if let last = session.lastTriggeredWaypointName {
-                Text("Last prompt: \(last)")
-                    .foregroundStyle(.secondary)
+            if let error = session.loggingError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Text("\(session.triggeredWaypointIDs.count) waypoint(s) triggered so far")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-
-            Spacer()
-
-            if showDebug {
-                debugPanel
+            if let error = session.locationError {
+                Label(error, systemImage: "location.slash")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            flagControls
+
+            if showDebug { debugPanel }
 
             Button(role: .destructive) {
                 session.end()
-                onEnd()
+                hasEnded = true
             } label: {
                 Text("End Walk")
                     .font(.headline)
@@ -55,11 +184,46 @@ struct ActiveWalkView: View {
                     .padding(.vertical, 6)
             }
             .buttonStyle(.bordered)
-            .padding(.horizontal)
-            .padding(.bottom)
         }
         .padding()
-        .interactiveDismissDisabled()
+        .background(.thinMaterial)
+    }
+
+    private var flagControls: some View {
+        VStack(spacing: 8) {
+            // The timestamp is recorded the instant this is tapped. The note
+            // sheet opens afterwards and is entirely optional — cancelling it
+            // still leaves a valid flag.
+            Button {
+                if let id = session.addFlag() {
+                    noteTarget = FlagNoteTarget(id: id)
+                }
+            } label: {
+                Label("Flag this moment", systemImage: "flag.fill")
+                    .font(.title3.bold())
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 60)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+
+            HStack {
+                if let last = session.lastFlagTime {
+                    Text("Last flag: \(Self.clockFormatter.string(from: last))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("No flags yet")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if session.canUndoLastFlag {
+                    Button("Undo last flag") { session.undoLastFlag() }
+                        .font(.caption)
+                }
+            }
+        }
     }
 
     private var debugPanel: some View {
@@ -71,6 +235,7 @@ struct ActiveWalkView: View {
             debugRow("Longitude", session.currentLongitude.map { String(format: "%.6f", $0) } ?? "—")
             debugRow("Next waypoint armed", session.isNextWaypointArmed ? "Yes" : "No")
             debugRow("Confirming arrival", session.isConfirmingArrival ? "Yes" : "No")
+            debugRow("Triggered", "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)")
         }
         .font(.system(.footnote, design: .monospaced))
         .padding()
@@ -85,5 +250,119 @@ struct ActiveWalkView: View {
             Spacer()
             Text(value)
         }
+    }
+}
+
+/// Optional free text for a flag that has *already* been recorded. Dismissing
+/// this without typing anything is a supported outcome, not a cancellation —
+/// the flag and its timestamp are on disk before this ever appears.
+private struct FlagNoteSheet: View {
+    var onSave: (String?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var note = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("What happened?", text: $note, axis: .vertical)
+                        .lineLimit(3...6)
+                        .focused($isFocused)
+                } footer: {
+                    Text("The flag has already been saved with its timestamp. A note is optional — skip it if now is not the moment.")
+                }
+            }
+            .navigationTitle("Add a note")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Skip") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(note)
+                        dismiss()
+                    }
+                    .disabled(note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear { isFocused = true }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+/// Shown once a walk has ended: what was recorded, and the file it went into.
+private struct WalkSummaryView: View {
+    @ObservedObject var session: WalkSession
+    let walk: Walk
+    var onDone: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Recorded") {
+                    LabeledContent("Route", value: walk.displayName)
+                    LabeledContent("Condition", value: session.informationLevel.rawValue)
+                    LabeledContent(
+                        "Waypoints triggered",
+                        value: "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)"
+                    )
+                    LabeledContent("Flags", value: "\(flagCount)")
+                }
+
+                if session.triggeredWaypointIDs.count < walk.waypoints.count {
+                    Section {
+                        Label(
+                            "Not every waypoint fired. The log records exactly which ones did, so this session can be judged on its merits rather than assumed complete.",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                    }
+                }
+
+                Section {
+                    if let url = session.lastSessionFileURL {
+                        ShareLink(item: url) {
+                            Label("Export \(url.lastPathComponent)", systemImage: "square.and.arrow.up")
+                        }
+                        Text("Also saved on the device — reachable from Past Sessions, the Files app, or Finder while tethered.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Label("No session file was written.", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("Session data")
+                }
+
+                if let error = session.loggingError {
+                    Section {
+                        Text(error).foregroundStyle(.red).font(.footnote)
+                    }
+                }
+            }
+            .navigationTitle("Walk Complete")
+            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .bottom) {
+                Button(action: onDone) {
+                    Text("Done")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding()
+                .background(.bar)
+            }
+        }
+    }
+
+    private var flagCount: Int {
+        session.logger?.events.filter { $0.type == .flag }.count ?? 0
     }
 }

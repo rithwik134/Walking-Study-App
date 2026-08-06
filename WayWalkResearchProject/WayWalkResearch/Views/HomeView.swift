@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var session = WalkSession()
+    @State private var participantID = ""
     @State private var selectedWalkID: WalkID = .walkA
     @State private var selectedLevel: InformationLevel = .navigationOnly
     @State private var testModeEnabled = false
@@ -10,9 +11,29 @@ struct HomeView: View {
     @State private var loadError: String?
     @State private var loadedWalk: Walk?
 
+    private var trimmedParticipantID: String {
+        participantID.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canStart: Bool { !trimmedParticipantID.isEmpty }
+
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    TextField("e.g. P03", text: $participantID)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("Participant")
+                } footer: {
+                    // Deliberately blank on every launch rather than
+                    // remembered: an ID auto-filled from the previous
+                    // participant is a silent mislabelling of study data,
+                    // which is far worse than retyping four characters.
+                    Text("Written into the session file name and every row of the log. Required.")
+                }
+
                 Section("Select Walk") {
                     Picker("Walk", selection: $selectedWalkID) {
                         ForEach(WalkID.allCases) { id in
@@ -39,6 +60,12 @@ struct HomeView: View {
                     } label: {
                         Label("View route map", systemImage: "map")
                     }
+
+                    NavigationLink {
+                        SessionsView()
+                    } label: {
+                        Label("Past sessions", systemImage: "tray.full")
+                    }
                 }
 
                 Section("Testing") {
@@ -55,13 +82,22 @@ struct HomeView: View {
             }
             .navigationTitle("WayWalk Research")
             .safeAreaInset(edge: .bottom) {
-                Button(action: startWalk) {
-                    Text("Start Walk")
-                        .font(.title2.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                VStack(spacing: 6) {
+                    Button(action: startWalk) {
+                        Text("Start Walk")
+                            .font(.title2.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canStart)
+
+                    if !canStart {
+                        Text("Enter a participant ID to start.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
                 .padding()
                 .background(.bar)
             }
@@ -70,13 +106,15 @@ struct HomeView: View {
                 RouteMapView()
             }
             .fullScreenCover(isPresented: $showingActiveWalk) {
-                if testModeEnabled, let loadedWalk {
-                    WaypointTestView(session: session, walk: loadedWalk) {
-                        showingActiveWalk = false
-                    }
-                } else {
-                    ActiveWalkView(session: session) {
-                        showingActiveWalk = false
+                if let loadedWalk {
+                    if testModeEnabled {
+                        WaypointTestView(session: session, walk: loadedWalk) {
+                            showingActiveWalk = false
+                        }
+                    } else {
+                        ActiveWalkView(session: session, walk: loadedWalk) {
+                            showingActiveWalk = false
+                        }
                     }
                 }
             }
@@ -90,7 +128,11 @@ struct HomeView: View {
         }
         loadError = nil
         loadedWalk = walk
-        session.start(walk: walk, informationLevel: selectedLevel)
+        session.start(
+            walk: walk,
+            informationLevel: selectedLevel,
+            participantID: trimmedParticipantID
+        )
         showingActiveWalk = true
     }
 }

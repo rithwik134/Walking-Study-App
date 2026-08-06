@@ -19,8 +19,22 @@
 		9CB9A24284BA4D3CA4CD8212 /* Waypoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220EFE1B24BE473280CEC266 /* Waypoint.swift */; };
 		A3CA67DF8F1D431CA432C72C /* WalkSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F5431F9C9F4734B5024000 /* WalkSession.swift */; };
 		AABB04223344556677889903 /* RouteDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB03223344556677889902 /* RouteDataTests.swift */; };
+		BB0200000000000000000001 /* SessionEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000001 /* SessionEvent.swift */; };
+		BB0200000000000000000002 /* RoutePath.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000002 /* RoutePath.swift */; };
+		BB0200000000000000000003 /* SessionLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000003 /* SessionLogger.swift */; };
+		BB0200000000000000000004 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000004 /* SessionStore.swift */; };
+		BB0200000000000000000005 /* RoutePathStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000005 /* RoutePathStore.swift */; };
+		BB0200000000000000000006 /* RoutePathBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000006 /* RoutePathBuilder.swift */; };
+		BB0200000000000000000007 /* WaypointPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000007 /* WaypointPreviewCard.swift */; };
+		BB0200000000000000000008 /* WaypointMapContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000008 /* WaypointMapContent.swift */; };
+		BB0200000000000000000009 /* RoutePathGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000009 /* RoutePathGeneratorView.swift */; };
+		BB020000000000000000000A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000A /* SessionsView.swift */; };
+		BB020000000000000000000B /* SessionLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000B /* SessionLoggerTests.swift */; };
+		BB020000000000000000000C /* RoutePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000C /* RoutePathTests.swift */; };
 		CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */; };
 		E1216741642A4EF5BBE999CA /* walkB.json in Resources */ = {isa = PBXBuildFile; fileRef = A6F7D1C48AEB4EEE8051CEBF /* walkB.json */; };
+		BB020000000000000000000D /* walkA_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000D /* walkA_path.json */; };
+		BB020000000000000000000E /* walkB_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000E /* walkB_path.json */; };
 		E263562B9EAE4ACEBA4FF770 /* WaypointTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75DF2887B7C408690FF61EE /* WaypointTestView.swift */; };
 		E2F3C0CA47A64E4B94686FCC /* RecordedAudioPromptPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */; };
 		F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */; };
@@ -52,6 +66,20 @@
 		A6F7D1C48AEB4EEE8051CEBF /* walkB.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkB.json; sourceTree = "<group>"; };
 		AABB02223344556677889901 /* WayWalkResearchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WayWalkResearchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AABB03223344556677889902 /* RouteDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteDataTests.swift; sourceTree = "<group>"; };
+		BB0100000000000000000001 /* SessionEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEvent.swift; sourceTree = "<group>"; };
+		BB0100000000000000000002 /* RoutePath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePath.swift; sourceTree = "<group>"; };
+		BB0100000000000000000003 /* SessionLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLogger.swift; sourceTree = "<group>"; };
+		BB0100000000000000000004 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		BB0100000000000000000005 /* RoutePathStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathStore.swift; sourceTree = "<group>"; };
+		BB0100000000000000000006 /* RoutePathBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathBuilder.swift; sourceTree = "<group>"; };
+		BB0100000000000000000007 /* WaypointPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointPreviewCard.swift; sourceTree = "<group>"; };
+		BB0100000000000000000008 /* WaypointMapContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointMapContent.swift; sourceTree = "<group>"; };
+		BB0100000000000000000009 /* RoutePathGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathGeneratorView.swift; sourceTree = "<group>"; };
+		BB010000000000000000000A /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
+		BB010000000000000000000B /* SessionLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLoggerTests.swift; sourceTree = "<group>"; };
+		BB010000000000000000000C /* RoutePathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathTests.swift; sourceTree = "<group>"; };
+		BB010000000000000000000D /* walkA_path.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkA_path.json; sourceTree = "<group>"; };
+		BB010000000000000000000E /* walkB_path.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkB_path.json; sourceTree = "<group>"; };
 		D168F585940542C2A28CEFAD /* WayWalkResearchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WayWalkResearchApp.swift; sourceTree = "<group>"; };
 		DC0C53FC31FB4DAF90158A9B /* SpeechPromptPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPromptPlayer.swift; sourceTree = "<group>"; };
 		E5384E4CF84A49A7AA85AD10 /* InformationLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InformationLevel.swift; sourceTree = "<group>"; };
@@ -80,12 +108,32 @@
 		05267C18D91D458AAFBB4EE8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				BB0300000000000000000002 /* Components */,
 				42D80C25C1964EBC80BDBED4 /* HomeView.swift */,
 				5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */,
 				958F0852DDB54F839F691090 /* RouteMapView.swift */,
 				F75DF2887B7C408690FF61EE /* WaypointTestView.swift */,
+				BB0100000000000000000009 /* RoutePathGeneratorView.swift */,
+				BB010000000000000000000A /* SessionsView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		BB0300000000000000000002 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BB0100000000000000000007 /* WaypointPreviewCard.swift */,
+				BB0100000000000000000008 /* WaypointMapContent.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		BB0300000000000000000001 /* Routing */ = {
+			isa = PBXGroup;
+			children = (
+				BB0100000000000000000006 /* RoutePathBuilder.swift */,
+			);
+			path = Routing;
 			sourceTree = "<group>";
 		};
 		052796601312497AA650A3E0 /* Location */ = {
@@ -123,6 +171,7 @@
 				F2EEEA2EEE5841F4920404EA /* Data */,
 				7B98FA046E594E448BC22DD3 /* Audio */,
 				052796601312497AA650A3E0 /* Location */,
+				BB0300000000000000000001 /* Routing */,
 				05267C18D91D458AAFBB4EE8 /* Views */,
 				9DEE9CE353244F379C3DDC72 /* Assets.xcassets */,
 				8683C1E53C2E419CB78C44BF /* Info.plist */,
@@ -134,6 +183,8 @@
 			isa = PBXGroup;
 			children = (
 				AABB03223344556677889902 /* RouteDataTests.swift */,
+				BB010000000000000000000B /* SessionLoggerTests.swift */,
+				BB010000000000000000000C /* RoutePathTests.swift */,
 			);
 			path = WayWalkResearchTests;
 			sourceTree = "<group>";
@@ -144,6 +195,8 @@
 				220EFE1B24BE473280CEC266 /* Waypoint.swift */,
 				4A6FD69672AC4AF1881C2450 /* Walk.swift */,
 				E5384E4CF84A49A7AA85AD10 /* InformationLevel.swift */,
+				BB0100000000000000000001 /* SessionEvent.swift */,
+				BB0100000000000000000002 /* RoutePath.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -161,8 +214,13 @@
 			isa = PBXGroup;
 			children = (
 				0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */,
+				BB0100000000000000000003 /* SessionLogger.swift */,
+				BB0100000000000000000004 /* SessionStore.swift */,
+				BB0100000000000000000005 /* RoutePathStore.swift */,
 				071809EE93CF4FCAA88A8F78 /* walkA.json */,
 				A6F7D1C48AEB4EEE8051CEBF /* walkB.json */,
+				BB010000000000000000000D /* walkA_path.json */,
+				BB010000000000000000000E /* walkB_path.json */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -250,6 +308,8 @@
 			files = (
 				75FE6DFF67D944C4A97CC7A4 /* walkA.json in Resources */,
 				E1216741642A4EF5BBE999CA /* walkB.json in Resources */,
+				BB020000000000000000000D /* walkA_path.json in Resources */,
+				BB020000000000000000000E /* walkB_path.json in Resources */,
 				332201BF0DEC415FA0C625E8 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -281,6 +341,16 @@
 				F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */,
 				08A6AAAC58A64BD78D60D6B5 /* RouteMapView.swift in Sources */,
 				E263562B9EAE4ACEBA4FF770 /* WaypointTestView.swift in Sources */,
+				BB0200000000000000000001 /* SessionEvent.swift in Sources */,
+				BB0200000000000000000002 /* RoutePath.swift in Sources */,
+				BB0200000000000000000003 /* SessionLogger.swift in Sources */,
+				BB0200000000000000000004 /* SessionStore.swift in Sources */,
+				BB0200000000000000000005 /* RoutePathStore.swift in Sources */,
+				BB0200000000000000000006 /* RoutePathBuilder.swift in Sources */,
+				BB0200000000000000000007 /* WaypointPreviewCard.swift in Sources */,
+				BB0200000000000000000008 /* WaypointMapContent.swift in Sources */,
+				BB0200000000000000000009 /* RoutePathGeneratorView.swift in Sources */,
+				BB020000000000000000000A /* SessionsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,6 +359,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AABB04223344556677889903 /* RouteDataTests.swift in Sources */,
+				BB020000000000000000000B /* SessionLoggerTests.swift in Sources */,
+				BB020000000000000000000C /* RoutePathTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

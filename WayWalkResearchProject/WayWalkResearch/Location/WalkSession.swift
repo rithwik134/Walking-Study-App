@@ -42,9 +42,34 @@ final class WalkSession: NSObject, ObservableObject {
     @Published private(set) var isConfirmingArrival = false
     @Published private(set) var currentWaypointNumber = 0
 
+    /// Which condition this walk is running. Published so the researcher
+    /// screens can show the participant exactly the script that will be
+    /// spoken, rather than guessing.
+    @Published private(set) var informationLevel: InformationLevel = .navigationOnly
+
+    // MARK: - Session logging
+
+    /// Every waypoint fire and flag is written to disk as it happens — see
+    /// `SessionLogger` for why the file is rewritten rather than appended.
+    private(set) var logger: SessionLogger?
+
+    /// The CSV for the walk that just finished, for the export screen.
+    @Published private(set) var lastSessionFileURL: URL?
+    /// Time of the most recent flag, for the "Last flag: 10:47:32" readout.
+    @Published private(set) var lastFlagTime: Date?
+    /// Non-nil when a log write has failed — surfaced in the UI rather than
+    /// silently losing study data.
+    @Published private(set) var loggingError: String?
+
+    /// Most recent CoreLocation failure, kept separate from `statusMessage`
+    /// so an error cannot hide which waypoint is armed. Cleared as soon as
+    /// fixes start arriving again.
+    @Published private(set) var locationError: String?
+
+    private var lastFlagEventID: UUID?
+
     private let locationManager = CLLocationManager()
     private let audioPlayer: AudioPromptPlaying
-    private var informationLevel: InformationLevel = .navigationOnly
 
     /// The full waypoint sequence for the walk in progress, in order.
     private var walkQueue: [Waypoint] = []
@@ -58,6 +83,10 @@ final class WalkSession: NSObject, ObservableObject {
     private let confirmationDwellTime: TimeInterval = 2.0
     /// The waypoint ID currently being confirmed, if any.
     private var pendingWaypointID: String?
+    /// When CoreLocation first reported arrival at `pendingWaypointID` —
+    /// logged alongside the prompt time so the record distinguishes "arrived"
+    /// from "prompt started".
+    private var pendingArrivalTime: Date?
     /// The in-flight dwell-timer task, cancelled if the participant leaves
     /// the radius early.
     private var confirmationTask: Task<Void, Never>?
@@ -85,15 +114,28 @@ final class WalkSession: NSObject, ObservableObject {
         locationManager.requestAlwaysAuthorization()
     }
 
-    func start(walk: Walk, informationLevel: InformationLevel) {
+    func start(walk: Walk, informationLevel: InformationLevel, participantID: String) {
         walkQueue = walk.waypoints
         currentIndex = 0
         self.informationLevel = informationLevel
         triggeredWaypointIDs = []
         lastTriggeredWaypointName = nil
         lastTriggerTime = nil
+        lastFlagTime = nil
+        lastFlagEventID = nil
+        loggingError = nil
+        locationError = nil
+        lastSessionFileURL = nil
         cancelConfirmation()
         isActive = true
+
+        let logger = SessionLogger(
+            participantID: participantID,
+            walkID: walk.id,
+            informationLevel: informationLevel
+        )
+        self.logger = logger
+        reportLoggingState()
 
         for region in locationManager.monitoredRegions {
             locationManager.stopMonitoring(for: region)
@@ -108,12 +150,71 @@ final class WalkSession: NSObject, ObservableObject {
         statusMessage = "Walk ended"
         isNextWaypointArmed = false
         cancelConfirmation()
+
+        if let logger {
+            logger.finish()
+            lastSessionFileURL = logger.fileURL
+            reportLoggingState()
+        }
+
         for region in locationManager.monitoredRegions {
             locationManager.stopMonitoring(for: region)
         }
         currentRegion = nil
         locationManager.stopUpdatingLocation()
         audioPlayer.stop()
+    }
+
+    // MARK: - Flags
+
+    /// Records a researcher flag at the instant this is called.
+    ///
+    /// The timestamp is stamped and written to disk here, *before* any note
+    /// UI is presented. That ordering is the whole design: a flag marks a
+    /// moment, and the moment is when the button was pressed — not when
+    /// somebody finished typing about it, and not conditional on them
+    /// finishing at all.
+    @discardableResult
+    func addFlag() -> UUID? {
+        guard let logger else { return nil }
+        let now = Date()
+        let id = logger.append(
+            type: .flag,
+            timestamp: now,
+            latitude: currentLatitude,
+            longitude: currentLongitude,
+            horizontalAccuracy: currentAccuracy
+        )
+        lastFlagTime = now
+        lastFlagEventID = id
+        reportLoggingState()
+        return id
+    }
+
+    /// Attaches optional free text to an already-recorded flag. Safe to call
+    /// with nil or whitespace — the flag simply stays note-less.
+    func attachNote(_ note: String?, to eventID: UUID) {
+        logger?.attachNote(note, to: eventID)
+        reportLoggingState()
+    }
+
+    /// Retracts the most recent flag, for a mis-tap. Only the most recent one
+    /// can be undone, and only once.
+    func undoLastFlag() {
+        guard let logger, let id = lastFlagEventID else { return }
+        logger.remove(eventID: id)
+        lastFlagEventID = nil
+        lastFlagTime = nil
+        reportLoggingState()
+    }
+
+    var canUndoLastFlag: Bool { lastFlagEventID != nil }
+
+    private func reportLoggingState() {
+        guard let logger else { return }
+        loggingError = logger.lastWriteError.map {
+            "Could not save session log: \($0.localizedDescription)"
+        }
     }
 
     /// Registers a geofence for exactly the next un-triggered waypoint. Only
@@ -191,6 +292,7 @@ final class WalkSession: NSObject, ObservableObject {
     private func beginConfirmation(for waypoint: Waypoint) {
         confirmationTask?.cancel()
         pendingWaypointID = waypoint.id
+        pendingArrivalTime = Date()
         isConfirmingArrival = true
         statusMessage = "Confirming arrival at \(waypoint.name)…"
 
@@ -210,8 +312,12 @@ final class WalkSession: NSObject, ObservableObject {
         confirmationTask?.cancel()
         confirmationTask = nil
         isConfirmingArrival = false
-        guard let pendingID = pendingWaypointID else { return }
+        guard let pendingID = pendingWaypointID else {
+            pendingArrivalTime = nil
+            return
+        }
         pendingWaypointID = nil
+        pendingArrivalTime = nil
         if isActive, currentIndex < walkQueue.count, walkQueue[currentIndex].id == pendingID {
             statusMessage = "Waiting to arrive at \(walkQueue[currentIndex].name)"
         }
@@ -230,11 +336,25 @@ final class WalkSession: NSObject, ObservableObject {
         if let last = lastTriggerTime, Date().timeIntervalSince(last) < minTriggerInterval {
             return
         }
-        lastTriggerTime = Date()
+        let firedAt = Date()
+        lastTriggerTime = firedAt
 
+        let arrivalTime = pendingArrivalTime
         pendingWaypointID = nil
+        pendingArrivalTime = nil
         confirmationTask = nil
         isConfirmingArrival = false
+
+        logger?.append(
+            type: .waypointTrigger,
+            timestamp: firedAt,
+            regionEntryTime: arrivalTime,
+            waypoint: waypoint,
+            latitude: currentLatitude,
+            longitude: currentLongitude,
+            horizontalAccuracy: currentAccuracy
+        )
+        reportLoggingState()
 
         triggeredWaypointIDs.insert(waypoint.id)
         lastTriggeredWaypointName = waypoint.name
@@ -252,16 +372,11 @@ final class WalkSession: NSObject, ObservableObject {
     /// contains the navigation instruction at its start, so the two are never
     /// concatenated or played back to back.
     private func playPrompt(for waypoint: Waypoint) {
-        switch informationLevel {
-        case .navigationOnly:
-            audioPlayer.play(key: "\(waypoint.id)_nav", script: waypoint.navigationPrompt, completion: nil)
-
-        case .navigationPlusContext:
-            let script = (waypoint.contextualPrompt?.isEmpty == false)
-                ? waypoint.contextualPrompt!
-                : waypoint.navigationPrompt // graceful fallback if a waypoint has no contextual script
-            audioPlayer.play(key: "\(waypoint.id)_context", script: script, completion: nil)
-        }
+        audioPlayer.play(
+            key: waypoint.audioKey(for: informationLevel),
+            script: waypoint.script(for: informationLevel),
+            completion: nil
+        )
     }
 }
 
@@ -281,6 +396,8 @@ extension WalkSession: CLLocationManagerDelegate {
             self.currentLatitude = location.coordinate.latitude
             self.currentLongitude = location.coordinate.longitude
             self.currentAccuracy = location.horizontalAccuracy
+            // Fixes are arriving again, so whatever failed has recovered.
+            self.locationError = nil
 
             // Purely informational (debug panel / test mode) — this no longer
             // drives any triggering or cancellation decision. A previous
@@ -305,12 +422,16 @@ extension WalkSession: CLLocationManagerDelegate {
         Task { @MainActor in self.handleExit(regionIdentifier: region.identifier) }
     }
 
+    // Location failures go to their own property rather than overwriting
+    // `statusMessage`. A single transient GPS error used to replace "Waiting
+    // to arrive at 7" permanently, leaving the researcher with no idea which
+    // waypoint was armed for the rest of the walk.
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        Task { @MainActor in self.statusMessage = "Location error: \(error.localizedDescription)" }
+        Task { @MainActor in self.locationError = "Location error: \(error.localizedDescription)" }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
-        Task { @MainActor in self.statusMessage = "Region monitoring failed: \(error.localizedDescription)" }
+        Task { @MainActor in self.locationError = "Region monitoring failed: \(error.localizedDescription)" }
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
