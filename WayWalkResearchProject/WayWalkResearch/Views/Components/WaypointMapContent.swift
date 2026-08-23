@@ -70,8 +70,11 @@ struct WaypointMapContent: MapContent {
             .frame(width: size, height: size)
             .overlay(Circle().stroke(.white, lineWidth: 2))
             .overlay(
+                // Explicit blue rather than the accent colour: the app's tint
+                // is a near-black graphite, which disappears against a grey
+                // map. Selection has to stay legible outdoors in sunlight.
                 Circle()
-                    .stroke(Color.accentColor, lineWidth: 3)
+                    .stroke(Color.blue, lineWidth: 3)
                     .padding(-4)
                     .opacity(isSelected ? 1 : 0)
             )

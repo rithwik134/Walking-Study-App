@@ -31,10 +31,10 @@
 		BB020000000000000000000A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000A /* SessionsView.swift */; };
 		BB020000000000000000000B /* SessionLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000B /* SessionLoggerTests.swift */; };
 		BB020000000000000000000C /* RoutePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000C /* RoutePathTests.swift */; };
-		CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */; };
-		E1216741642A4EF5BBE999CA /* walkB.json in Resources */ = {isa = PBXBuildFile; fileRef = A6F7D1C48AEB4EEE8051CEBF /* walkB.json */; };
 		BB020000000000000000000D /* walkA_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000D /* walkA_path.json */; };
 		BB020000000000000000000E /* walkB_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000E /* walkB_path.json */; };
+		CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */; };
+		E1216741642A4EF5BBE999CA /* walkB.json in Resources */ = {isa = PBXBuildFile; fileRef = A6F7D1C48AEB4EEE8051CEBF /* walkB.json */; };
 		E263562B9EAE4ACEBA4FF770 /* WaypointTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75DF2887B7C408690FF61EE /* WaypointTestView.swift */; };
 		E2F3C0CA47A64E4B94686FCC /* RecordedAudioPromptPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */; };
 		F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */; };
@@ -119,23 +119,6 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		BB0300000000000000000002 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				BB0100000000000000000007 /* WaypointPreviewCard.swift */,
-				BB0100000000000000000008 /* WaypointMapContent.swift */,
-			);
-			path = Components;
-			sourceTree = "<group>";
-		};
-		BB0300000000000000000001 /* Routing */ = {
-			isa = PBXGroup;
-			children = (
-				BB0100000000000000000006 /* RoutePathBuilder.swift */,
-			);
-			path = Routing;
-			sourceTree = "<group>";
-		};
 		052796601312497AA650A3E0 /* Location */ = {
 			isa = PBXGroup;
 			children = (
@@ -187,6 +170,23 @@
 				BB010000000000000000000C /* RoutePathTests.swift */,
 			);
 			path = WayWalkResearchTests;
+			sourceTree = "<group>";
+		};
+		BB0300000000000000000001 /* Routing */ = {
+			isa = PBXGroup;
+			children = (
+				BB0100000000000000000006 /* RoutePathBuilder.swift */,
+			);
+			path = Routing;
+			sourceTree = "<group>";
+		};
+		BB0300000000000000000002 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BB0100000000000000000007 /* WaypointPreviewCard.swift */,
+				BB0100000000000000000008 /* WaypointMapContent.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		BD393214DB6740AD8D4D765C /* Models */ = {
@@ -412,7 +412,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = VA37T7Y228;
+				DEVELOPMENT_TEAM = 98SNX6UZ24;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = WayWalkResearch/Info.plist;
@@ -473,7 +473,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = VA37T7Y228;
+				DEVELOPMENT_TEAM = 98SNX6UZ24;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = WayWalkResearch/Info.plist;

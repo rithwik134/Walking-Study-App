@@ -19,33 +19,31 @@ struct SessionsView: View {
     }()
 
     var body: some View {
-        List {
+        Group {
             if sessions.isEmpty {
+                // Outside the List deliberately: nested in a list row this
+                // renders squeezed into a single inset cell instead of
+                // filling the screen.
                 ContentUnavailableView(
                     "No sessions yet",
                     systemImage: "tray",
                     description: Text("Completed walks are saved here as CSV files.")
                 )
             } else {
-                Section {
-                    ForEach(sessions) { session in
-                        row(for: session)
-                    }
-                } footer: {
-                    Text("These files are also in the Files app under On My iPhone → WayWalk Research, and in Finder when the phone is connected to a Mac.")
-                }
-
-                if sessions.count > 1 {
-                    Section {
-                        ShareLink(items: sessions.map(\.url)) {
-                            Label("Export all \(sessions.count) sessions", systemImage: "square.and.arrow.up.on.square")
-                        }
-                    }
-                }
+                list
             }
         }
         .navigationTitle("Past Sessions")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if sessions.count > 1 {
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(items: sessions.map(\.url)) {
+                        Label("Export all", systemImage: "square.and.arrow.up.on.square")
+                    }
+                }
+            }
+        }
         .onAppear { reload() }
         .confirmationDialog(
             "Delete this session?",
@@ -68,40 +66,90 @@ struct SessionsView: View {
         }
     }
 
+    private var list: some View {
+        List {
+            Section {
+                ForEach(sessions) { session in
+                    row(for: session)
+                }
+            } footer: {
+                Text("Also in the Files app under On My iPhone → WayWalk Research, and in Finder when the phone is connected to a Mac.")
+            }
+        }
+    }
+
     private func row(for session: SessionFile) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(session.participantID)
-                    .font(.headline)
-                if let walkID = session.walkID {
-                    Text(walkID.rawValue == "walkA" ? "Walk A" : "Walk B")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(.quaternary)
-                        .clipShape(Capsule())
+        HStack(spacing: 12) {
+            Image(systemName: session.isTest ? "testtube.2" : "figure.walk")
+                .font(.system(size: 17))
+                .foregroundStyle(session.isTest ? .orange : walkTint(session.walkID))
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(session.participantID)
+                        .font(.headline)
+
+                    if let walkID = session.walkID {
+                        badge(walkLabel(walkID), tint: walkTint(walkID))
+                    }
+                    if session.isTest {
+                        badge("TEST", tint: .orange)
+                    }
                 }
-                Spacer()
-                ShareLink(item: session.url) {
-                    Image(systemName: "square.and.arrow.up")
-                }
-                .buttonStyle(.borderless)
+
+                Text(secondaryLine(for: session))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            Text(session.recordedAt.map(Self.dateFormatter.string(from:)) ?? session.fileName)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(byteDescription(session.byteCount))
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            Spacer(minLength: 0)
         }
-        .swipeActions {
+        .padding(.vertical, 2)
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            ShareLink(item: session.url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            .tint(.blue)
+        }
+        .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
                 pendingDeletion = session
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+        }
+    }
+
+    private func badge(_ text: String, tint: Color) -> some View {
+        Text(text)
+            .font(.caption2.bold())
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(tint.opacity(0.15))
+            .foregroundStyle(tint)
+            .clipShape(Capsule())
+    }
+
+    private func secondaryLine(for session: SessionFile) -> String {
+        let date = session.recordedAt.map(Self.dateFormatter.string(from:)) ?? session.fileName
+        return "\(date) · \(byteDescription(session.byteCount))"
+    }
+
+    /// Matches the colours the routes are drawn in on the maps, so a session
+    /// is recognisable at a glance.
+    private func walkTint(_ walkID: WalkID?) -> Color {
+        switch walkID {
+        case .walkA: return .orange
+        case .walkB: return .purple
+        case nil: return .secondary
+        }
+    }
+
+    private func walkLabel(_ walkID: WalkID) -> String {
+        switch walkID {
+        case .walkA: return "Walk A"
+        case .walkB: return "Walk B"
         }
     }
 

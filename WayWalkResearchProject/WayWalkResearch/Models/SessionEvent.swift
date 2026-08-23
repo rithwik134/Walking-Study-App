@@ -78,6 +78,7 @@ struct SessionMetadata: Codable, Equatable {
     let participantID: String
     let walkID: WalkID
     let informationLevel: InformationLevel
+    let mode: SessionMode
     let startedAt: Date
     var endedAt: Date?
     let timeZoneIdentifier: String
@@ -87,6 +88,7 @@ struct SessionMetadata: Codable, Equatable {
         participantID: String,
         walkID: WalkID,
         informationLevel: InformationLevel,
+        mode: SessionMode = .study,
         startedAt: Date,
         endedAt: Date? = nil,
         timeZoneIdentifier: String = TimeZone.current.identifier
@@ -95,6 +97,7 @@ struct SessionMetadata: Codable, Equatable {
         self.participantID = participantID
         self.walkID = walkID
         self.informationLevel = informationLevel
+        self.mode = mode
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.timeZoneIdentifier = timeZoneIdentifier

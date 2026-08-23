@@ -5,13 +5,14 @@ import Foundation
 /// The summary is parsed from the filename rather than by reading the CSV,
 /// so listing a hundred sessions costs a single directory scan. The filename
 /// format is fixed by `SessionLogger`:
-/// `WayWalk_<participant>_<walkID>_<yyyyMMdd-HHmmss>.csv`
+/// `WayWalk_[TEST_]<participant>_<walkID>_<yyyyMMdd-HHmmss>.csv`
 struct SessionFile: Identifiable {
     let url: URL
     let participantID: String
     let walkID: WalkID?
     let recordedAt: Date?
     let byteCount: Int
+    let isTest: Bool
 
     var id: URL { url }
     var fileName: String { url.lastPathComponent }
@@ -65,20 +66,38 @@ final class SessionStore {
         let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         let stem = url.deletingPathExtension().lastPathComponent
 
-        // WayWalk_<participant>_<walkID>_<stamp> — participant IDs are
+        // WayWalk_[TEST_]<participant>_<walkID>_<stamp> — participant IDs are
         // sanitised to alphanumerics and hyphens by SessionLogger, so the
         // underscores are unambiguous separators.
-        let parts = stem.split(separator: "_").map(String.init)
+        var parts = stem.split(separator: "_").map(String.init)
         guard parts.count >= 4, parts[0] == "WayWalk" else {
-            return SessionFile(url: url, participantID: stem, walkID: nil, recordedAt: nil, byteCount: size)
+            return SessionFile(
+                url: url, participantID: stem, walkID: nil,
+                recordedAt: nil, byteCount: size, isTest: false
+            )
+        }
+        parts.removeFirst()
+
+        // The optional TEST marker shifts everything after it along by one.
+        // Without handling it, every test file would list its participant as
+        // "TEST" and its walk as the participant ID.
+        let isTest = parts.first == SessionLogger.testFileNameMarker
+        if isTest { parts.removeFirst() }
+
+        guard parts.count >= 3 else {
+            return SessionFile(
+                url: url, participantID: stem, walkID: nil,
+                recordedAt: nil, byteCount: size, isTest: isTest
+            )
         }
 
         return SessionFile(
             url: url,
-            participantID: parts[1],
-            walkID: WalkID(rawValue: parts[2]),
-            recordedAt: stampFormatter.date(from: parts[3]),
-            byteCount: size
+            participantID: parts[0],
+            walkID: WalkID(rawValue: parts[1]),
+            recordedAt: stampFormatter.date(from: parts[2]),
+            byteCount: size,
+            isTest: isTest
         )
     }
 }

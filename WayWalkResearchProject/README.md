@@ -81,8 +81,8 @@ Every walk writes a CSV to `Documents/Sessions/` on the device, named
 the session start, each waypoint as it fires, each flag the researcher
 raises, and the session end.
 
-Columns: `session_id, participant_id, walk, information_level, event_index,
-event_type, time_iso, time_local, elapsed_s, region_entry_local,
+Columns: `session_id, participant_id, walk, information_level, session_mode,
+event_index, event_type, time_iso, time_local, elapsed_s, region_entry_local,
 waypoint_order, waypoint_id, waypoint_name, latitude, longitude,
 gps_accuracy_m, note`.
 
@@ -100,6 +100,21 @@ Two timing details worth knowing:
 The file is rewritten from scratch after every single event, so if the app
 crashes or iOS terminates it mid-walk, everything up to that moment is
 already on disk.
+
+### Test runs are marked
+
+Waypoint Test Mode still records a session — it has to, or you could not check
+that logging works before a real walk. To stop a test being mistaken for
+participant data later, a test run is marked twice over:
+
+- the file is named `WayWalk_TEST_<participant>_…`, so it is obvious in a
+  Finder listing without opening anything, and
+- every row carries `session_mode = test` (real walks carry `study`), so the
+  marking survives a rename.
+
+The Home screen makes it visible too: the button reads **Start Test Mode** and
+turns orange, and Past Sessions shows a **TEST** badge on those rows. Filter
+them out with `session_mode == "study"` before analysis.
 
 Three ways to get the files off the device, in rough order of convenience:
 

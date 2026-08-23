@@ -47,6 +47,9 @@ final class WalkSession: NSObject, ObservableObject {
     /// spoken, rather than guessing.
     @Published private(set) var informationLevel: InformationLevel = .navigationOnly
 
+    /// Whether the walk in progress is real data collection or a test run.
+    @Published private(set) var sessionMode: SessionMode = .study
+
     // MARK: - Session logging
 
     /// Every waypoint fire and flag is written to disk as it happens — see
@@ -114,7 +117,12 @@ final class WalkSession: NSObject, ObservableObject {
         locationManager.requestAlwaysAuthorization()
     }
 
-    func start(walk: Walk, informationLevel: InformationLevel, participantID: String) {
+    func start(
+        walk: Walk,
+        informationLevel: InformationLevel,
+        participantID: String,
+        mode: SessionMode = .study
+    ) {
         walkQueue = walk.waypoints
         currentIndex = 0
         self.informationLevel = informationLevel
@@ -132,9 +140,11 @@ final class WalkSession: NSObject, ObservableObject {
         let logger = SessionLogger(
             participantID: participantID,
             walkID: walk.id,
-            informationLevel: informationLevel
+            informationLevel: informationLevel,
+            mode: mode
         )
         self.logger = logger
+        sessionMode = mode
         reportLoggingState()
 
         for region in locationManager.monitoredRegions {

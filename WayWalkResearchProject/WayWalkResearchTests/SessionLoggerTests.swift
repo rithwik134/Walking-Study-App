@@ -24,12 +24,14 @@ final class SessionLoggerTests: XCTestCase {
         participant: String = "P03",
         walk: WalkID = .walkA,
         level: InformationLevel = .navigationOnly,
+        mode: SessionMode = .study,
         startedAt: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> SessionLogger {
         SessionLogger(
             participantID: participant,
             walkID: walk,
             informationLevel: level,
+            mode: mode,
             startedAt: startedAt,
             directory: directory
         )
@@ -169,8 +171,58 @@ final class SessionLoggerTests: XCTestCase {
             XCTAssertEqual(column("participant_id", in: row), "P07")
             XCTAssertEqual(column("walk", in: row), "walkB")
             XCTAssertEqual(column("information_level", in: row), "Navigation + Context")
+            XCTAssertEqual(column("session_mode", in: row), "study")
             XCTAssertFalse(column("session_id", in: row).isEmpty)
         }
+    }
+
+    // MARK: - Test-mode marking
+
+    /// A test run must be distinguishable from a participant's data by the
+    /// file itself, not by anyone's memory of which ID they typed.
+    func testTestModeIsMarkedInTheFileNameAndEveryRow() {
+        let logger = makeLogger(participant: "P03", walk: .walkA, mode: .test)
+        logger.append(type: .flag)
+        logger.finish()
+
+        let name = logger.fileURL.lastPathComponent
+        XCTAssertTrue(name.hasPrefix("WayWalk_TEST_P03_walkA_"), "unexpected filename \(name)")
+
+        let rows = parse(logger.csvText).dropFirst()
+        XCTAssertFalse(rows.isEmpty)
+        for row in rows {
+            XCTAssertEqual(column("session_mode", in: row), "test")
+            XCTAssertEqual(column("participant_id", in: row), "P03")
+        }
+    }
+
+    /// The marking has to survive a rename, which is why it is in the rows and
+    /// not only the file name.
+    func testStudyModeIsTheDefaultAndCarriesNoMarker() {
+        let logger = makeLogger()
+        XCTAssertEqual(logger.metadata.mode, .study)
+        XCTAssertFalse(logger.fileURL.lastPathComponent.contains("TEST"))
+        XCTAssertEqual(column("session_mode", in: parse(logger.csvText)[1]), "study")
+    }
+
+    func testStoreParsesATestFileNameBackToTheRightParticipant() {
+        let logger = makeLogger(participant: "P09", walk: .walkB, mode: .test)
+        logger.finish()
+
+        let listed = SessionStore(directory: directory).sessions()
+        XCTAssertEqual(listed.count, 1)
+        let session = listed[0]
+        XCTAssertTrue(session.isTest)
+        XCTAssertEqual(session.participantID, "P09", "the TEST marker must not be read as the participant")
+        XCTAssertEqual(session.walkID, .walkB)
+        XCTAssertNotNil(session.recordedAt)
+    }
+
+    func testStoreMarksOrdinaryFilesAsNotTest() {
+        makeLogger(participant: "P09", walk: .walkB).finish()
+        let session = try! XCTUnwrap(SessionStore(directory: directory).sessions().first)
+        XCTAssertFalse(session.isTest)
+        XCTAssertEqual(session.participantID, "P09")
     }
 
     // MARK: - Waypoint rows

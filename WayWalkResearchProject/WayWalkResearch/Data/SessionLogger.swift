@@ -33,7 +33,7 @@ final class SessionLogger {
     /// The columns of the exported CSV, in order. Kept as one list so the
     /// header and the row builder can never drift apart.
     static let columns = [
-        "session_id", "participant_id", "walk", "information_level",
+        "session_id", "participant_id", "walk", "information_level", "session_mode",
         "event_index", "event_type",
         "time_iso", "time_local", "elapsed_s", "region_entry_local",
         "waypoint_order", "waypoint_id", "waypoint_name",
@@ -49,10 +49,15 @@ final class SessionLogger {
         return documents.appendingPathComponent("Sessions", isDirectory: true)
     }
 
+    /// The marker inserted into a test run's file name. `SessionStore` looks
+    /// for exactly this token when parsing a file name back apart.
+    static let testFileNameMarker = "TEST"
+
     init(
         participantID: String,
         walkID: WalkID,
         informationLevel: InformationLevel,
+        mode: SessionMode = .study,
         startedAt: Date = Date(),
         directory: URL = SessionLogger.defaultDirectory
     ) {
@@ -71,11 +76,15 @@ final class SessionLogger {
             participantID: participantID,
             walkID: walkID,
             informationLevel: informationLevel,
+            mode: mode,
             startedAt: startedAt,
             timeZoneIdentifier: timeZone.identifier
         )
 
-        self.fileURL = directory.appendingPathComponent("WayWalk_\(sessionID).csv")
+        // A test run is marked in the file name as well as in every row, so it
+        // is obvious in a Finder listing without opening anything.
+        let prefix = mode.isTest ? "WayWalk_\(Self.testFileNameMarker)_" : "WayWalk_"
+        self.fileURL = directory.appendingPathComponent("\(prefix)\(sessionID).csv")
 
         self.isoFormatter = ISO8601DateFormatter()
         self.isoFormatter.timeZone = timeZone
@@ -165,6 +174,7 @@ final class SessionLogger {
             metadata.participantID,
             metadata.walkID.rawValue,
             metadata.informationLevel.rawValue,
+            metadata.mode.rawValue,
             String(event.index),
             event.type.rawValue,
             isoFormatter.string(from: event.timestamp),
