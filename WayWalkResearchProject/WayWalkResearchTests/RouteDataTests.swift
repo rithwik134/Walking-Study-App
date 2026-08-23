@@ -79,14 +79,14 @@ final class RouteDataTests: XCTestCase {
 
     // MARK: - Waypoint count
 
-    func testWalkAHas17Waypoints() throws {
+    func testWalkAWaypointCount() throws {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
-        XCTAssertEqual(walk.waypoints.count, 17)
+        XCTAssertEqual(walk.waypoints.count, 28)
     }
 
-    func testWalkBHas17Waypoints() throws {
+    func testWalkBWaypointCount() throws {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
-        XCTAssertEqual(walk.waypoints.count, 17)
+        XCTAssertEqual(walk.waypoints.count, 27)
     }
 
     // MARK: - Ordering
@@ -127,21 +127,56 @@ final class RouteDataTests: XCTestCase {
 
     // MARK: - Prompts present
 
-    func testEveryWaypointHasNavigationPrompt() throws {
-        let walkA = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
-        let walkB = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
-        for wp in walkA.waypoints + walkB.waypoints {
-            XCTAssertFalse(wp.navigationPrompt.isEmpty, "\(wp.id) missing navigation prompt")
+    /// Every waypoint must say *something* under at least one condition —
+    /// a waypoint blank in both directions is a data error, not a design.
+    func testEveryWaypointSaysSomethingInAtLeastOneCondition() throws {
+        for wp in try allWaypoints() {
+            let nav = wp.script(for: .navigationOnly).trimmingCharacters(in: .whitespacesAndNewlines)
+            let context = wp.script(for: .navigationPlusContext)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            XCTAssertFalse(nav.isEmpty && context.isEmpty, "\(wp.id) is silent in both conditions")
         }
     }
 
-    func testEveryWaypointHasContextualPrompt() throws {
+    /// The contextual condition must never be silent: where a waypoint has no
+    /// contextual script, `script(for:)` falls back to the navigation prompt.
+    func testContextualConditionIsNeverSilent() throws {
+        for wp in try allWaypoints() {
+            let script = wp.script(for: .navigationPlusContext)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            XCTAssertFalse(script.isEmpty, "\(wp.id) has nothing to say in Navigation + Context")
+        }
+    }
+
+    /// Some waypoints exist purely to deliver environmental context and carry
+    /// no navigation instruction, so they are deliberately silent in the
+    /// Navigation Only condition. Pinned so that a data edit which blanks a
+    /// prompt by accident shows up as a failure rather than as silence in the
+    /// field.
+    func testOnlyTheKnownContextOnlyWaypointsAreSilentInNavigationOnly() throws {
+        var silent: [String] = []
+        for wp in try allWaypoints() {
+            if wp.script(for: .navigationOnly)
+                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                silent.append(wp.id)
+            }
+        }
+        XCTAssertEqual(silent, ["a2", "a11", "a16", "b2", "b10", "b26"])
+    }
+
+    /// Where a contextual script is absent the app must fall back rather than
+    /// go quiet — these are the waypoints relying on that fallback today.
+    func testWaypointsWithoutContextualScriptFallBackToNavigation() throws {
+        for wp in try allWaypoints() where (wp.contextualPrompt ?? "").isEmpty {
+            XCTAssertEqual(wp.script(for: .navigationPlusContext), wp.navigationPrompt)
+            XCTAssertFalse(wp.navigationPrompt.isEmpty, "\(wp.id) has neither script")
+        }
+    }
+
+    private func allWaypoints() throws -> [Waypoint] {
         let walkA = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
         let walkB = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
-        for wp in walkA.waypoints + walkB.waypoints {
-            XCTAssertNotNil(wp.contextualPrompt, "\(wp.id) missing contextual prompt")
-            XCTAssertFalse(wp.contextualPrompt?.isEmpty ?? true, "\(wp.id) contextual prompt is empty")
-        }
+        return walkA.waypoints + walkB.waypoints
     }
 
     // MARK: - Coordinates sanity (London bounding box)
@@ -169,14 +204,22 @@ final class RouteDataTests: XCTestCase {
 
     // MARK: - Waypoint name consistency
 
-    func testWaypointNamesAreNumeric() throws {
-        let walkA = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
-        let walkB = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
-        for walk in [walkA, walkB] {
-            for (index, wp) in walk.waypoints.enumerated() {
-                XCTAssertEqual(wp.name, "\(index + 1)",
-                               "\(wp.id) name should be \"\(index + 1)\" but is \"\(wp.name)\"")
-            }
+    func testWaypointNamesMatchTheirIdentifiers() throws {
+        for wp in try allWaypoints() {
+            XCTAssertEqual(wp.name, "Waypoint \(wp.id)",
+                           "\(wp.id) name should be \"Waypoint \(wp.id)\" but is \"\(wp.name)\"")
+        }
+    }
+
+    /// Trigger radii must stay well clear of the GPS noise floor. iOS region
+    /// monitoring is not precise at small radii, and the previous route data
+    /// used 5m, which is below what CoreLocation can resolve.
+    func testAllTriggerRadiiAreAboveTheGPSNoiseFloor() throws {
+        for wp in try allWaypoints() {
+            XCTAssertGreaterThanOrEqual(
+                wp.triggerRadius, 8,
+                "\(wp.id) radius \(wp.triggerRadius)m is too small to trigger reliably"
+            )
         }
     }
 

@@ -21,9 +21,14 @@ final class RoutePathBuilder: ObservableObject {
     @Published private(set) var failedLegs: [Int] = []
 
     /// Pause between consecutive directions requests.
-    private let interRequestDelay: Duration = .milliseconds(400)
+    ///
+    /// Raised from 400ms after a 53-leg run (both routes back to back) had
+    /// its last three legs throttled out — Apple's limit is cumulative across
+    /// requests, so a long route, or a second route generated straight after
+    /// a first, is exactly when it bites.
+    private let interRequestDelay: Duration = .milliseconds(800)
     /// Attempts per leg before giving up on it.
-    private let maxAttempts = 3
+    private let maxAttempts = 4
 
     enum BuilderError: LocalizedError {
         case notEnoughWaypoints

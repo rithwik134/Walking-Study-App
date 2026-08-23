@@ -2,171 +2,271 @@
   {
     "id": "b1",
     "order": 1,
-    "name": "1",
-    "latitude": 51.5268,
-    "longitude": -0.130087,
-    "triggerRadius": 5,
-    "navigationPrompt": "Head north on Upper Woburn Place.",
-    "contextualPrompt": "Head north on Upper Woburn Place via the few descending steps. St Pancras New Church is located on your right. The church is a prominent historic landmark in this part of Bloomsbury."
+    "name": "Waypoint b1",
+    "latitude": 51.526793,
+    "longitude": -0.13005,
+    "triggerRadius": 10,
+    "navigationPrompt": "Starting route to University College London\nIn 60 metres, cross Euston Road ahead and then turn left\n",
+    "contextualPrompt": "Starting route to University College London\nHead north on Upper Woburn Place for 60 metres then cross Euston Road ahead via the staggered crossing.\n"
   },
   {
     "id": "b2",
     "order": 2,
-    "name": "2",
-    "latitude": 51.527241,
-    "longitude": -0.130506,
-    "triggerRadius": 5,
-    "navigationPrompt": "Cross Euston Road using the staggered crossing, then cross Eversholt Street on the left and turn right to continue.",
-    "contextualPrompt": "Cross Euston Road using the staggered crossing, then cross Eversholt Street on the left and turn right to continue. A bus depot also connects with this street at the signalled crossing coming up on your left."
+    "name": "Waypoint b2",
+    "latitude": 51.526997,
+    "longitude": -0.130315,
+    "triggerRadius": 8,
+    "navigationPrompt": "",
+    "contextualPrompt": "Saint Pancras New Church is located on your right. The church is a prominent historic landmark in this part of Bloomsbury."
   },
   {
     "id": "b3",
     "order": 3,
-    "name": "3",
-    "latitude": 51.528292,
-    "longitude": -0.131949,
-    "triggerRadius": 5,
-    "navigationPrompt": "Turn left and proceed to Euston Station forecourt.",
-    "contextualPrompt": "Turn left and proceed to Euston Station forecourt via the ascending steps. You are entering Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
+    "name": "Waypoint b3",
+    "latitude": 51.527267,
+    "longitude": -0.130613,
+    "triggerRadius": 8,
+    "navigationPrompt": "Cross Euston Road ahead and then turn left to cross Eversholt Street.",
+    "contextualPrompt": "Cross Euston Road straight ahead using the staggered crossing, then cross Eversholt Street on the left and turn right to continue north."
   },
   {
     "id": "b4",
     "order": 4,
-    "name": "4",
-    "latitude": 51.528023,
-    "longitude": -0.132576,
-    "triggerRadius": 5,
-    "navigationPrompt": "Continue through Euston Station forecourt and then turn left to use the south exit.",
-    "contextualPrompt": "Continue through Euston Station forecourt and then turn left to use the south exit. Follow the outer shoreline on your right to avoid seating and complex pedestrian movement. Pass the station entrance and commerce before turning left onto the path leading south."
+    "name": "Waypoint b4",
+    "latitude": 51.527384,
+    "longitude": -0.130986,
+    "triggerRadius": 10,
+    "navigationPrompt": "Turn right onto Eversholt Street then in 120 metres, take the stairs on the left",
+    "contextualPrompt": "Continue north on Eversholt Street for 50 metres."
   },
   {
     "id": "b5",
     "order": 5,
-    "name": "5",
-    "latitude": 51.526868,
-    "longitude": -0.132549,
-    "triggerRadius": 5,
-    "navigationPrompt": "Continue along the path turning East along the Euston Road.",
-    "contextualPrompt": "Continue along the path turning East along the Euston Road. A taxi rank is located on your right. University College Hospital is located in this area."
+    "name": "Waypoint b5",
+    "latitude": 51.527801,
+    "longitude": -0.131409,
+    "triggerRadius": 8,
+    "navigationPrompt": "Cross Euston Square then continue straight for 50 metres",
+    "contextualPrompt": "Cross the bus loop on the left via the signalled crossing, then continue north for 50 metres and take the ascending stairs on the left."
   },
   {
     "id": "b6",
     "order": 6,
-    "name": "6",
-    "latitude": 51.5265,
-    "longitude": -0.133577,
-    "triggerRadius": 5,
-    "navigationPrompt": "Cross Melton Street and then turn left to cross Euston Road.",
-    "contextualPrompt": "Cross Melton Street and then turn left to cross Euston Road. The Melton Street crossing is staggered and signalled. The Euston Road crossing is unsignalled. This is a major transport corridor with high traffic volumes and continuous pedestrian movement. "
+    "name": "Waypoint b6",
+    "latitude": 51.528264,
+    "longitude": -0.131932,
+    "triggerRadius": 8,
+    "navigationPrompt": "Take the stairs on the left",
+    "contextualPrompt": "Take the ascending stairs on the left to enter Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
   },
   {
     "id": "b7",
     "order": 7,
-    "name": "7",
-    "latitude": 51.526398,
-    "longitude": -0.133853,
-    "triggerRadius": 5,
-    "navigationPrompt": "Cross Euston Road and continue south on Gordon Street.",
-    "contextualPrompt": "Cross Euston Road and continue south on Gordon Street. This area is surrounded by UCL buildings and student services."
+    "name": "Waypoint b7",
+    "latitude": 51.528185,
+    "longitude": -0.132249,
+    "triggerRadius": 8,
+    "navigationPrompt": "In 100 metres turn left",
+    "contextualPrompt": "In 100 metres, turn left to use the south exit. You are passing the station entrances and commerce"
   },
   {
     "id": "b8",
     "order": 8,
-    "name": "8",
-    "latitude": 51.526096,
-    "longitude": -0.13351,
-    "triggerRadius": 5,
-    "navigationPrompt": "Continue south on Gordon Street.",
-    "contextualPrompt": "Continue south on Gordon Street. This street has a contemporary design with wide pedestrian areas, trees and distinctive paving that differs from surrounding streets."
+    "name": "Waypoint b8",
+    "latitude": 51.527664,
+    "longitude": -0.133351,
+    "triggerRadius": 10,
+    "navigationPrompt": "Turn left onto the path and continue for 100 metres",
+    "contextualPrompt": "Turn left and head south to exit onto the path that then turns East along the Euston Road."
   },
   {
     "id": "b9",
     "order": 9,
-    "name": "9",
-    "latitude": 51.524674,
-    "longitude": -0.132067,
-    "triggerRadius": 5,
-    "navigationPrompt": "Turn left to continue east along Gordon Square.",
-    "contextualPrompt": "Turn left to continue east along Gordon Square using the zebra crossing. This mixed-use street combines pedestrian space, seating, tables, planters and a cycleway within the same streetscape. Access to vehicles is prohibited."
+    "name": "Waypoint b9",
+    "latitude": 51.526872,
+    "longitude": -0.132563,
+    "triggerRadius": 8,
+    "navigationPrompt": "Turn right onto Euston Road and continue for 150 metres.",
+    "contextualPrompt": "Turn right onto Euston Road and continue for 150 metres. A taxi rank is located on the right. University College Hospital is located in this area."
   },
   {
     "id": "b10",
     "order": 10,
-    "name": "10",
-    "latitude": 51.524963,
-    "longitude": -0.131098,
-    "triggerRadius": 8,
-    "navigationPrompt": "Turn right to continue south along Gordon Square.",
-    "contextualPrompt": "Turn right to continue south along Gordon Square. A cycleway intersects the corner and the proceeding footway is narrow."
+    "name": "Waypoint b10",
+    "latitude": 51.526667,
+    "longitude": -0.133153,
+    "triggerRadius": 10,
+    "navigationPrompt": "",
+    "contextualPrompt": "This is a major transport corridor with high traffic volumes and continuous pedestrian movement"
   },
   {
     "id": "b11",
     "order": 11,
-    "name": "11",
-    "latitude": 51.524472,
-    "longitude": -0.130465,
-    "triggerRadius": 5,
-    "navigationPrompt": "Turn right to enter Gordon Square and follow the path to the south exit.",
-    "contextualPrompt": "Turn right to enter Gordon Square and follow the path to the south exit. Follow the outer path to your left. This park contains several intersecting pathways with a shoreline route along the south, east and north side. The part is characterised by benches and open grass areas."
+    "name": "Waypoint b11",
+    "latitude": 51.526465,
+    "longitude": -0.133665,
+    "triggerRadius": 10,
+    "navigationPrompt": "Cross over Melton Street ahead then turn left and  cross Euston Road.",
+    "contextualPrompt": "Cross Melton Street ahead and then turn left to cross Euston Road. The Melton Street crossing is staggered and signalled. The Euston Road crossing is unsignalled"
   },
   {
     "id": "b12",
     "order": 12,
-    "name": "12",
-    "latitude": 51.523841,
-    "longitude": -0.130304,
-    "triggerRadius": 5,
-    "navigationPrompt": "Exit Gorden Square and cross the road.",
-    "contextualPrompt": "Exit Gorden Square and cross the road using the zebra crossing. This crossing is intersected by cycleways on either side."
+    "name": "Waypoint b12",
+    "latitude": 51.526206,
+    "longitude": -0.133563,
+    "triggerRadius": 10,
+    "navigationPrompt": "In 200 metres, turn left onto Gordon Square",
+    "contextualPrompt": "Continue south on Gordon Street for 200 metres. This street has a contemporary yellow aesthetic design with wide pedestrian areas, bicycle racks and trees in raised planters"
   },
   {
     "id": "b13",
     "order": 13,
-    "name": "13",
-    "latitude": 51.523671,
-    "longitude": -0.130138,
-    "triggerRadius": 5,
-    "navigationPrompt": "Turn left into Woburn Square. Follow the path to your left to walk around the park clockwise back to the entrance.",
-    "contextualPrompt": "Turn left into Woburn Square. Follow the path to your left to walk around the park clockwise back to the entrance. This is one of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle."
+    "name": "Waypoint b13",
+    "latitude": 51.525897,
+    "longitude": -0.133276,
+    "triggerRadius": 8,
+    "navigationPrompt": "Cross Gower Place and continue straight for 150 metres.",
+    "contextualPrompt": "Cross Gower Place and continue south for 150 metres. One-way traffic approaches from the left"
   },
   {
     "id": "b14",
     "order": 14,
-    "name": "14",
-    "latitude": 51.523634,
-    "longitude": -0.129824,
-    "triggerRadius": 5,
-    "navigationPrompt": "When exiting the park, turn left and continue straight.",
-    "contextualPrompt": "When exiting the park, turn left and continue straight through Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries."
+    "name": "Waypoint b14",
+    "latitude": 51.524682,
+    "longitude": -0.132067,
+    "triggerRadius": 8,
+    "navigationPrompt": "Turn left onto Gordon Square via the crossing",
+    "contextualPrompt": "Turn left onto Gordon Square via the zebra crossing"
   },
   {
     "id": "b15",
     "order": 15,
-    "name": "15",
-    "latitude": 51.52284,
-    "longitude": -0.131654,
+    "name": "Waypoint b15",
+    "latitude": 51.524697,
+    "longitude": -0.131836,
     "triggerRadius": 8,
-    "navigationPrompt": "Continue straight.",
-    "contextualPrompt": "Continue straight. You are leaving the main UCL campus area and returning to a more conventional streetscape."
+    "navigationPrompt": "In 60 metres, turn right onto Gordon Square using the crossing",
+    "contextualPrompt": "In 60 metres, turn right to head south on Gordon Square. This mixed-use street combines pedestrian space, seating, tables, planters and a cycleway within the same streetscape. Access to vehicles is prohibited"
   },
   {
     "id": "b16",
     "order": 16,
-    "name": "16",
-    "latitude": 51.522466,
-    "longitude": -0.132515,
-    "triggerRadius": 5,
-    "navigationPrompt": "Turn right onto Gower Street and head north.",
-    "contextualPrompt": "Turn right onto Gower Street and head north. This crossing is intersected by cycleways on either side."
+    "name": "Waypoint b16",
+    "latitude": 51.524979,
+    "longitude": -0.131066,
+    "triggerRadius": 10,
+    "navigationPrompt": "Turn right onto Gordon Square",
+    "contextualPrompt": "Turn right to continue south along Gordon Square. A cycleway intersects the corner and the proceeding pavement is narrow."
   },
   {
     "id": "b17",
     "order": 17,
-    "name": "17",
-    "latitude": 51.524314,
-    "longitude": -0.134529,
-    "triggerRadius": 5,
-    "navigationPrompt": "The destination is on your right, UCL Gower Street.",
-    "contextualPrompt": "The destination is on your right, UCL Gower Street. This is the main entrance of the university."
+    "name": "Waypoint b17",
+    "latitude": 51.524908,
+    "longitude": -0.130935,
+    "triggerRadius": 8,
+    "navigationPrompt": "In 60 metres, turn right into Gordon Square",
+    "contextualPrompt": "In 60 metres, turn right into Gordon Square"
+  },
+  {
+    "id": "b18",
+    "order": 18,
+    "name": "Waypoint b18",
+    "latitude": 51.524489,
+    "longitude": -0.130465,
+    "triggerRadius": 8,
+    "navigationPrompt": "Turn right into Gordon Square, then in 20 metres, turn left",
+    "contextualPrompt": "Turn right to enter Gordon Square and follow the outer shoreline path on the left towards the south exit. The square is characterised by benches and open grass areas"
+  },
+  {
+    "id": "b19",
+    "order": 19,
+    "name": "Waypoint b19",
+    "latitude": 51.524287,
+    "longitude": -0.130666,
+    "triggerRadius": 8,
+    "navigationPrompt": "Turn left, then in 60 metres, exit Gordon Square",
+    "contextualPrompt": null
+  },
+  {
+    "id": "b20",
+    "order": 20,
+    "name": "Waypoint b20",
+    "latitude": 51.523856,
+    "longitude": -0.130291,
+    "triggerRadius": 10,
+    "navigationPrompt": "Exit Gordon Square and cross over the road ahead using the crossing to enter Woburn Square",
+    "contextualPrompt": "Turn left to exit Gorden Square then cross the road using the zebra crossing to enter Woburn Square. This crossing is intersected by cycleways on either side"
+  },
+  {
+    "id": "b21",
+    "order": 21,
+    "name": "Waypoint b21",
+    "latitude": 51.523656,
+    "longitude": -0.130093,
+    "triggerRadius": 10,
+    "navigationPrompt": "Enter Woburn Square, then In 80 metres continue around the square and return to the entrance.",
+    "contextualPrompt": "Enter Woburn Square then follow the path ahead for 80 metres where it then leads back to the entrance. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
+  },
+  {
+    "id": "b22",
+    "order": 22,
+    "name": "Waypoint b22",
+    "latitude": 51.523679,
+    "longitude": -0.129881,
+    "triggerRadius": 8,
+    "navigationPrompt": "Turn right to exit Woburn Square, then turn left onto Woburn Square",
+    "contextualPrompt": "Turn right to exit Woburn Square, then turn left and head west into Byng Place"
+  },
+  {
+    "id": "b23",
+    "order": 23,
+    "name": "Waypoint b23",
+    "latitude": 51.523571,
+    "longitude": -0.130404,
+    "triggerRadius": 8,
+    "navigationPrompt": "Continue straight for 200 metres through Byng Place.",
+    "contextualPrompt": "Head west for 200 metres through Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
+  },
+  {
+    "id": "b24",
+    "order": 24,
+    "name": "Waypoint b24",
+    "latitude": 51.522797,
+    "longitude": -0.131686,
+    "triggerRadius": 10,
+    "navigationPrompt": "Cross Mallet Place, then in 50 metres, turn right onto Gower Street",
+    "contextualPrompt": "Cross Mallet Place, then in 50 metres, turn right onto Gower Street. You are leaving the main UCL campus area and returning to a more conventional streetscape"
+  },
+  {
+    "id": "b25",
+    "order": 25,
+    "name": "Waypoint b25",
+    "latitude": 51.522466,
+    "longitude": -0.132517,
+    "triggerRadius": 8,
+    "navigationPrompt": "Turn right onto Gower Street, then in 250 metres the destination is on your right. University College London.",
+    "contextualPrompt": "Turn right to head north on Gower Street then In 250 metres, the destination is on your right, University College London. This crossing is intersected by cycleways on either side."
+  },
+  {
+    "id": "b26",
+    "order": 26,
+    "name": "Waypoint b26",
+    "latitude": 51.523,
+    "longitude": -0.133118,
+    "triggerRadius": 10,
+    "navigationPrompt": "",
+    "contextualPrompt": "This is a moderately busy street with a wide footway and UCL buildings on either side."
+  },
+  {
+    "id": "b27",
+    "order": 27,
+    "name": "Waypoint b27",
+    "latitude": 51.52432,
+    "longitude": -0.134499,
+    "triggerRadius": 10,
+    "navigationPrompt": "Arrived.",
+    "contextualPrompt": "Turn right to enter the main quad of the university. Arrived."
   }
 ]

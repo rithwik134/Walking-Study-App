@@ -94,11 +94,27 @@ final class WalkSession: NSObject, ObservableObject {
     /// the radius early.
     private var confirmationTask: Task<Void, Never>?
 
-    /// Debounce guard: ignore a confirmed arrival within this many seconds of
-    /// the last one, so a momentary GPS blip immediately after a trigger
-    /// can't fire a second prompt back to back.
-    private let minTriggerInterval: TimeInterval = 4.0
-    private var lastTriggerTime: Date?
+    /// How often to re-ask CoreLocation whether the participant is inside the
+    /// armed waypoint's region.
+    ///
+    /// `didEnterRegion` only fires on a genuine outside→inside transition, and
+    /// `requestState` used to be called once, at arm time. If a dwell was
+    /// cancelled by a jittery `didExitRegion` — routine at the radii this
+    /// route uses — and CoreLocation's state then settled back to "inside"
+    /// without another transition, no further event ever arrived and the walk
+    /// stopped dead at that waypoint. Re-asking periodically costs almost
+    /// nothing next to the continuous location updates already running, and
+    /// converts a permanent stall into a few seconds' delay.
+    private let stateRecheckInterval: TimeInterval = 5.0
+    private var stateRecheckTask: Task<Void, Never>?
+
+    // There is deliberately no cross-waypoint trigger debounce. An earlier
+    // version ignored any confirmed arrival within 4s of the previous one,
+    // which was both redundant and actively harmful: `triggeredWaypointIDs`
+    // already guarantees a waypoint fires at most once, and because the dwell
+    // (2s) is always shorter than that window was (4s), any waypoint the
+    // participant was already standing inside when it was armed could never
+    // satisfy it — wedging that waypoint and every waypoint after it.
 
     init(audioPlayer: AudioPromptPlaying = SpeechPromptPlayer()) {
         self.audioPlayer = audioPlayer
@@ -128,7 +144,6 @@ final class WalkSession: NSObject, ObservableObject {
         self.informationLevel = informationLevel
         triggeredWaypointIDs = []
         lastTriggeredWaypointName = nil
-        lastTriggerTime = nil
         lastFlagTime = nil
         lastFlagEventID = nil
         loggingError = nil
@@ -160,6 +175,7 @@ final class WalkSession: NSObject, ObservableObject {
         statusMessage = "Walk ended"
         isNextWaypointArmed = false
         cancelConfirmation()
+        cancelStateRecheck()
 
         if let logger {
             logger.finish()
@@ -232,6 +248,7 @@ final class WalkSession: NSObject, ObservableObject {
     /// stopped first — which is what makes cross-waypoint misfires impossible.
     private func armNextWaypoint() {
         cancelConfirmation()
+        cancelStateRecheck()
 
         if let currentRegion {
             locationManager.stopMonitoring(for: currentRegion)
@@ -262,6 +279,9 @@ final class WalkSession: NSObject, ObservableObject {
         // armed, this can't cross-trigger a different waypoint. Entry here
         // still goes through the same dwell-time confirmation as any other.
         locationManager.requestState(for: region)
+        // …and keep asking, so a transition that never arrives (or a dwell
+        // cancelled by GPS jitter) recovers instead of stalling the walk.
+        startStateRecheck(for: region)
 
         isNextWaypointArmed = true
         statusMessage = "Waiting to arrive at \(waypoint.name)"
@@ -321,39 +341,84 @@ final class WalkSession: NSObject, ObservableObject {
     private func cancelConfirmation() {
         confirmationTask?.cancel()
         confirmationTask = nil
-        isConfirmingArrival = false
-        guard let pendingID = pendingWaypointID else {
-            pendingArrivalTime = nil
-            return
-        }
-        pendingWaypointID = nil
-        pendingArrivalTime = nil
+        let pendingID = pendingWaypointID
+        clearPendingConfirmation()
+        guard let pendingID else { return }
         if isActive, currentIndex < walkQueue.count, walkQueue[currentIndex].id == pendingID {
             statusMessage = "Waiting to arrive at \(walkQueue[currentIndex].name)"
         }
     }
 
-    /// Called once the dwell timer completes without being cancelled. This is
-    /// the only place a prompt actually plays.
-    private func confirmArrival(waypointID: String) {
-        guard isActive else { return }
-        guard pendingWaypointID == waypointID else { return } // cancelled or superseded
-        guard currentIndex < walkQueue.count else { return }
-        let waypoint = walkQueue[currentIndex]
-        guard waypoint.id == waypointID else { return }
-        guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
-
-        if let last = lastTriggerTime, Date().timeIntervalSince(last) < minTriggerInterval {
-            return
-        }
-        let firedAt = Date()
-        lastTriggerTime = firedAt
-
-        let arrivalTime = pendingArrivalTime
+    /// Drops the in-flight confirmation state, making the waypoint eligible to
+    /// be confirmed again. Every early return in `confirmArrival` goes through
+    /// here — leaving `pendingWaypointID` set is what wedged the walk.
+    private func clearPendingConfirmation() {
         pendingWaypointID = nil
         pendingArrivalTime = nil
-        confirmationTask = nil
         isConfirmingArrival = false
+    }
+
+    /// Periodically re-asks CoreLocation whether we are inside the armed
+    /// region, so a missed or cancelled transition recovers on its own.
+    ///
+    /// This uses CoreLocation's own filtered geofence state — the same source
+    /// as `didEnterRegion` — rather than comparing raw GPS distance, so it
+    /// cannot make prompts fire earlier than they otherwise would. It only
+    /// recovers arrivals that would have been missed entirely.
+    private func startStateRecheck(for region: CLCircularRegion) {
+        stateRecheckTask?.cancel()
+        let interval = stateRecheckInterval
+        stateRecheckTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(interval))
+                guard !Task.isCancelled, let self else { return }
+                guard self.isActive,
+                      self.currentRegion?.identifier == region.identifier,
+                      !self.triggeredWaypointIDs.contains(region.identifier)
+                else { return }
+                // A confirmation for this waypoint is already counting down;
+                // asking again would only be discarded.
+                if self.pendingWaypointID != region.identifier {
+                    self.locationManager.requestState(for: region)
+                }
+            }
+        }
+    }
+
+    private func cancelStateRecheck() {
+        stateRecheckTask?.cancel()
+        stateRecheckTask = nil
+    }
+
+    /// Called once the dwell timer completes without being cancelled. This is
+    /// the only place a prompt actually plays.
+    ///
+    /// Every exit path from here must leave `pendingWaypointID` clear.
+    /// `handleCandidateArrival` reads a non-nil `pendingWaypointID` as "a
+    /// confirmation for this waypoint is already counting down" and discards
+    /// the event — so returning early while it is still set silently discards
+    /// every future arrival for that waypoint, and because the next waypoint
+    /// is only armed at the bottom of this method, kills the rest of the walk.
+    private func confirmArrival(waypointID: String) {
+        // The one case that must not clear the pending state: it belongs to a
+        // different waypoint, so it is not ours to touch.
+        guard pendingWaypointID == waypointID else { return }
+
+        guard isActive,
+              currentIndex < walkQueue.count,
+              walkQueue[currentIndex].id == waypointID,
+              !triggeredWaypointIDs.contains(waypointID)
+        else {
+            clearPendingConfirmation()
+            return
+        }
+
+        let waypoint = walkQueue[currentIndex]
+        let firedAt = Date()
+        let arrivalTime = pendingArrivalTime
+
+        clearPendingConfirmation()
+        confirmationTask = nil
 
         logger?.append(
             type: .waypointTrigger,
