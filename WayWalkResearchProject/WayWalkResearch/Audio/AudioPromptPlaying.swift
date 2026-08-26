@@ -17,4 +17,19 @@ protocol AudioPromptPlaying: AnyObject {
     ///          (e.g. a chime before the recorded-audio version speaks).
     func play(key: String, script: String, completion: (() -> Void)?)
     func stop()
+
+    /// Human-readable description of the voice actually in use, for the
+    /// researcher debug panel.
+    ///
+    /// Worth surfacing because the quality tier is invisible from inside the
+    /// app otherwise: Enhanced and Premium voices are user downloads, so
+    /// whether a walk sounds natural or robotic depends on device settings
+    /// rather than on anything in this codebase. Without a readout, "did the
+    /// voice download actually take effect?" is unanswerable on the phone.
+    var voiceDescription: String { get }
+}
+
+extension AudioPromptPlaying {
+    /// Backends that do not synthesise speech have no voice to report.
+    var voiceDescription: String { "Recorded audio" }
 }

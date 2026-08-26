@@ -74,6 +74,12 @@ final class WalkSession: NSObject, ObservableObject {
     private let locationManager = CLLocationManager()
     private let audioPlayer: AudioPromptPlaying
 
+    /// The voice prompts will actually be spoken in, for the debug panel.
+    /// Quality depends on which voices the participant's phone has downloaded,
+    /// so this is the only way to confirm on-device that a better voice took
+    /// effect. See `SpeechPromptPlayer`.
+    var audioVoiceDescription: String { audioPlayer.voiceDescription }
+
     /// The full waypoint sequence for the walk in progress, in order.
     private var walkQueue: [Waypoint] = []
     /// Index into walkQueue of the waypoint currently armed (not yet triggered).

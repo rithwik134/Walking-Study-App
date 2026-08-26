@@ -236,6 +236,7 @@ struct ActiveWalkView: View {
             debugRow("Next waypoint armed", session.isNextWaypointArmed ? "Yes" : "No")
             debugRow("Confirming arrival", session.isConfirmingArrival ? "Yes" : "No")
             debugRow("Triggered", "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)")
+            debugRow("Voice", session.audioVoiceDescription)
         }
         .font(.system(.footnote, design: .monospaced))
         .padding()

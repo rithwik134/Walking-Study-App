@@ -244,4 +244,5 @@ final class RouteDataTests: XCTestCase {
         XCTAssertEqual(WalkID.walkA.dataFileName, "walkA")
         XCTAssertEqual(WalkID.walkB.dataFileName, "walkB")
     }
+
 }
