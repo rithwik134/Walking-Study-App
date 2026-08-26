@@ -47,8 +47,13 @@ final class WalkSession: NSObject, ObservableObject {
     /// spoken, rather than guessing.
     @Published private(set) var informationLevel: InformationLevel = .navigationOnly
 
-    /// Whether the walk in progress is real data collection or a test run.
+    /// How the walk in progress is being run.
     @Published private(set) var sessionMode: SessionMode = .study
+
+    /// Manual mode only: whether the participant is currently inside the armed
+    /// waypoint's trigger radius. Drives the cue button's colour — it is a
+    /// hint about *when* to play, never a gate on being able to.
+    @Published private(set) var isInsideCurrentRadius = false
 
     // MARK: - Session logging
 
@@ -180,6 +185,7 @@ final class WalkSession: NSObject, ObservableObject {
         isActive = false
         statusMessage = "Walk ended"
         isNextWaypointArmed = false
+        isInsideCurrentRadius = false
         cancelConfirmation()
         cancelStateRecheck()
 
@@ -255,6 +261,9 @@ final class WalkSession: NSObject, ObservableObject {
     private func armNextWaypoint() {
         cancelConfirmation()
         cancelStateRecheck()
+        // A new waypoint has not been arrived at yet, whatever was true of the
+        // last one.
+        isInsideCurrentRadius = false
 
         if let currentRegion {
             locationManager.stopMonitoring(for: currentRegion)
@@ -307,6 +316,17 @@ final class WalkSession: NSObject, ObservableObject {
         guard waypoint.id == regionIdentifier else { return }
         guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
 
+        // Manual mode never plays on arrival. Arrival only lights the cue
+        // button; the researcher decides when the prompt is actually spoken.
+        // The arrival time is still recorded, so the log keeps both "when they
+        // reached it" and "when it was played".
+        if sessionMode == .manual {
+            isInsideCurrentRadius = true
+            if pendingArrivalTime == nil { pendingArrivalTime = Date() }
+            statusMessage = "At \(waypoint.name) — ready to play"
+            return
+        }
+
         // didEnterRegion and requestState's didDetermineState can both report
         // the same arrival in quick succession — don't restart the timer if
         // a confirmation for this exact waypoint is already counting down.
@@ -315,12 +335,36 @@ final class WalkSession: NSObject, ObservableObject {
         beginConfirmation(for: waypoint)
     }
 
+    /// Manual mode: play the current waypoint's prompt now.
+    ///
+    /// Deliberately callable whether or not the participant is inside the
+    /// radius — the radius is guidance about roughly when the cue is due, not
+    /// a precondition. Repeated presses queue rather than interrupt, because
+    /// `AVSpeechSynthesizer.speak` appends to its own queue and nothing here
+    /// calls `stop()` mid-walk.
+    func playCurrentWaypoint() {
+        guard isActive, sessionMode == .manual, currentIndex < walkQueue.count else { return }
+        let waypoint = walkQueue[currentIndex]
+        guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
+
+        deliverPrompt(for: waypoint, at: Date(), arrivedAt: pendingArrivalTime)
+    }
+
     /// Cancels an in-progress dwell confirmation if CoreLocation reports the
     /// participant has genuinely left the waypoint's radius before the
     /// confirmation window completed. Only acts if this exit is for the
     /// waypoint currently being confirmed — a stray exit event for a region
     /// we've already moved past is ignored.
     private func handleExit(regionIdentifier: String) {
+        if sessionMode == .manual {
+            guard currentRegion?.identifier == regionIdentifier else { return }
+            // The cue button goes grey again, but `pendingArrivalTime` is
+            // deliberately kept: they did arrive, and that first arrival is
+            // what the log should compare the play time against even if they
+            // drifted out and back before pressing.
+            isInsideCurrentRadius = false
+            return
+        }
         guard pendingWaypointID == regionIdentifier else { return }
         cancelConfirmation()
     }
@@ -425,11 +469,25 @@ final class WalkSession: NSObject, ObservableObject {
 
         clearPendingConfirmation()
         confirmationTask = nil
+        deliverPrompt(for: waypoint, at: firedAt, arrivedAt: arrivalTime)
+    }
 
+    /// Records the waypoint, speaks it, and advances to the next one.
+    ///
+    /// Shared by the automatic path (`confirmArrival`) and the manual one
+    /// (`playCurrentWaypoint`) so the two cannot drift apart in what they log
+    /// or how they advance — the only difference between the modes should be
+    /// *when* this runs, not what it does.
+    ///
+    /// `arrivedAt` is when CoreLocation first reported the participant inside
+    /// the radius. In manual mode that is deliberately not the same as
+    /// `firedAt`: the gap between them is how long the researcher waited
+    /// before cueing, which is the thing this mode exists to capture.
+    private func deliverPrompt(for waypoint: Waypoint, at firedAt: Date, arrivedAt: Date?) {
         logger?.append(
             type: .waypointTrigger,
             timestamp: firedAt,
-            regionEntryTime: arrivalTime,
+            regionEntryTime: arrivedAt,
             waypoint: waypoint,
             latitude: currentLatitude,
             longitude: currentLongitude,

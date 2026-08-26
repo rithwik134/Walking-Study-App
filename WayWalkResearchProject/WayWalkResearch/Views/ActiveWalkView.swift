@@ -296,7 +296,8 @@ private struct FlagNoteSheet: View {
 }
 
 /// Shown once a walk has ended: what was recorded, and the file it went into.
-private struct WalkSummaryView: View {
+/// Shared with `ManualWalkView` — both end the same way.
+struct WalkSummaryView: View {
     @ObservedObject var session: WalkSession
     let walk: Walk
     var onDone: () -> Void

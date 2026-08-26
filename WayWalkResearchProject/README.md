@@ -51,6 +51,7 @@ WayWalkResearch/
     ActiveWalkView.swift          ← researcher screen during a walk: map, prompt, flags
     RouteMapView.swift            ← MapKit overview of one walk at a time, for checking
     WaypointTestView.swift        ← live waypoint test mode
+    ManualWalkView.swift          ← manual mode: researcher cues each prompt
     SessionsView.swift            ← past session CSVs, with share and delete
     RoutePathGeneratorView.swift  ← authoring UI for the routed paths
     Components/
@@ -101,20 +102,22 @@ The file is rewritten from scratch after every single event, so if the app
 crashes or iOS terminates it mid-walk, everything up to that moment is
 already on disk.
 
-### Test runs are marked
+### Non-study runs are marked
 
-Waypoint Test Mode still records a session — it has to, or you could not check
-that logging works before a real walk. To stop a test being mistaken for
-participant data later, a test run is marked twice over:
+The Home screen has a **Modes** section with two mutually exclusive toggles.
+Both still record a session — they have to, or you could not check that logging
+works before a real walk — so both are marked twice over, to stop either being
+mistaken for participant data later:
 
-- the file is named `WayWalk_TEST_<participant>_…`, so it is obvious in a
-  Finder listing without opening anything, and
-- every row carries `session_mode = test` (real walks carry `study`), so the
-  marking survives a rename.
+| Mode | File name | Every row | Home screen |
+|---|---|---|---|
+| Normal walk | `WayWalk_<participant>_…` | `session_mode = study` | Start Walk |
+| Waypoint Test Mode | `WayWalk_TEST_<participant>_…` | `session_mode = test` | Start Test Mode, orange |
+| Manual Mode | `WayWalk_MANUAL_<participant>_…` | `session_mode = manual` | Start Manual Mode, indigo |
 
-The Home screen makes it visible too: the button reads **Start Test Mode** and
-turns orange, and Past Sessions shows a **TEST** badge on those rows. Filter
-them out with `session_mode == "study"` before analysis.
+The marker is in the file name so it is obvious in a Finder listing without
+opening anything, and in every row so it survives a rename. Past Sessions
+badges them too. **Filter with `session_mode == "study"` before analysis.**
 
 Three ways to get the files off the device, in rough order of convenience:
 
@@ -135,6 +138,33 @@ entirely optional — dismissing it without typing still leaves a valid,
 timestamped flag. **Undo last flag** retracts a mis-tap, which leaves a
 deliberate gap in `event_index` rather than renumbering, so the record shows
 that something was withdrawn.
+
+## Manual Mode
+
+Prompts do not fire on arrival. The route, waypoints and trigger radii are
+shown exactly as in a normal walk, but nothing is spoken until the researcher
+presses **Play waypoint n**.
+
+The button is grey outside the trigger radius and turns green on entering it,
+so you can see roughly when a prompt is due — but it stays pressable either
+way. That is deliberate: the radius is a hint about timing, not a gate.
+Judging the right moment is the point of the mode, and a button that refused to
+work until CoreLocation agreed would take that judgement away exactly when it
+is wanted.
+
+Pressing plays the current waypoint and advances to the next one, so the walk
+progresses at the researcher's pace rather than the geofence's. Pressing again
+before the previous prompt has finished **queues** the new one rather than
+cutting it off.
+
+For analysis, a manual row uses the two time columns to mean different things:
+
+- `region_entry_local` — when CoreLocation reported arrival at the radius
+  (empty if the prompt was played before arriving)
+- `time_local` — when the button was actually pressed
+
+**The gap between them is how long the researcher waited before cueing**, which
+is the measurement this mode exists to produce.
 
 ## Routed map lines
 
@@ -183,8 +213,8 @@ does not always include garden paths and internal campus routes.
   a small panel with live GPS accuracy, current waypoint number, distance
   to the next waypoint, latitude/longitude, and whether the next waypoint
   is currently armed. Hidden by default.
-- **Waypoint Test Mode**, toggled on the Home screen before starting a
-  walk, replaces the normal researcher screen with a live map showing every
+- **Waypoint Test Mode**, toggled under **Modes** on the Home screen before
+  starting a walk, replaces the normal researcher screen with a live map showing every
   waypoint, your current position, which waypoint is armed (orange), and
   which have already triggered (green) — useful for fine-tuning waypoint
   positions and radii before real data collection.

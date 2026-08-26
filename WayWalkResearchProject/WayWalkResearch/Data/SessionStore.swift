@@ -5,14 +5,16 @@ import Foundation
 /// The summary is parsed from the filename rather than by reading the CSV,
 /// so listing a hundred sessions costs a single directory scan. The filename
 /// format is fixed by `SessionLogger`:
-/// `WayWalk_[TEST_]<participant>_<walkID>_<yyyyMMdd-HHmmss>.csv`
+/// `WayWalk_[TEST_|MANUAL_]<participant>_<walkID>_<yyyyMMdd-HHmmss>.csv`
 struct SessionFile: Identifiable {
     let url: URL
     let participantID: String
     let walkID: WalkID?
     let recordedAt: Date?
     let byteCount: Int
-    let isTest: Bool
+    /// Taken from the file name marker. The CSV rows carry the authoritative
+    /// value in `session_mode`; this is the cheap version for listing.
+    let mode: SessionMode
 
     var id: URL { url }
     var fileName: String { url.lastPathComponent }
@@ -66,28 +68,31 @@ final class SessionStore {
         let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         let stem = url.deletingPathExtension().lastPathComponent
 
-        // WayWalk_[TEST_]<participant>_<walkID>_<stamp> — participant IDs are
+        // WayWalk_[MARKER_]<participant>_<walkID>_<stamp> — participant IDs are
         // sanitised to alphanumerics and hyphens by SessionLogger, so the
         // underscores are unambiguous separators.
         var parts = stem.split(separator: "_").map(String.init)
         guard parts.count >= 4, parts[0] == "WayWalk" else {
             return SessionFile(
                 url: url, participantID: stem, walkID: nil,
-                recordedAt: nil, byteCount: size, isTest: false
+                recordedAt: nil, byteCount: size, mode: .study
             )
         }
         parts.removeFirst()
 
-        // The optional TEST marker shifts everything after it along by one.
-        // Without handling it, every test file would list its participant as
-        // "TEST" and its walk as the participant ID.
-        let isTest = parts.first == SessionLogger.testFileNameMarker
-        if isTest { parts.removeFirst() }
+        // An optional TEST/MANUAL marker shifts everything after it along by
+        // one. Without handling it, a marked file would list its participant
+        // as "TEST" and its walk as the participant ID.
+        var mode = SessionMode.study
+        if let first = parts.first, SessionLogger.fileNameMarkers.contains(first) {
+            mode = SessionMode.allCases.first { $0.fileNameMarker == first } ?? .study
+            parts.removeFirst()
+        }
 
         guard parts.count >= 3 else {
             return SessionFile(
                 url: url, participantID: stem, walkID: nil,
-                recordedAt: nil, byteCount: size, isTest: isTest
+                recordedAt: nil, byteCount: size, mode: mode
             )
         }
 
@@ -97,7 +102,7 @@ final class SessionStore {
             walkID: WalkID(rawValue: parts[1]),
             recordedAt: stampFormatter.date(from: parts[2]),
             byteCount: size,
-            isTest: isTest
+            mode: mode
         )
     }
 }

@@ -19,7 +19,22 @@ import AVFoundation
 /// app picked it up.
 final class SpeechPromptPlayer: NSObject, AudioPromptPlaying {
     private let synthesizer = AVSpeechSynthesizer()
-    private var completionHandler: (() -> Void)?
+
+    /// Completion handlers keyed by the utterance they belong to.
+    ///
+    /// `AVSpeechSynthesizer.speak` **enqueues** — it does not interrupt — so
+    /// several utterances can be in flight at once, and `didFinish` reports
+    /// which one ended. A single stored handler could not represent that: each
+    /// `play` overwrote the previous one, so with N queued prompts N-1
+    /// completions were dropped and the last was invoked when the *first*
+    /// utterance ended. Silently, with no crash or log to notice it by.
+    ///
+    /// `AVSpeechUtterance` is an `NSObject` and hashes by identity, so it can
+    /// key the dictionary directly. Keying on `ObjectIdentifier` instead would
+    /// risk an address being reused by a later allocation; holding the
+    /// utterance strongly here cannot. Entries are removed on finish, on
+    /// cancel and in `stop`, so nothing accumulates.
+    private var completionHandlers: [AVSpeechUtterance: () -> Void] = [:]
 
     /// Last resolved voice. Re-resolved on every utterance rather than fixed
     /// at init, because voices can be downloaded while the app is installed —
@@ -118,16 +133,22 @@ final class SpeechPromptPlayer: NSObject, AudioPromptPlaying {
     }
 
     func play(key: String, script: String, completion: (() -> Void)? = nil) {
-        completionHandler = completion
         let utterance = AVSpeechUtterance(string: script)
         utterance.voice = resolveVoice()
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        if let completion {
+            completionHandlers[utterance] = completion
+        }
         synthesizer.speak(utterance)
     }
 
+    /// Stops immediately and abandons anything queued behind it.
+    ///
+    /// Pending completions are dropped rather than called: they signal
+    /// "this prompt finished", and a prompt cut off part-way did not.
     func stop() {
         synthesizer.stopSpeaking(at: .immediate)
-        completionHandler = nil
+        completionHandlers.removeAll()
     }
 
     @objc private func handleInterruption(_ notification: Notification) {
@@ -166,13 +187,16 @@ final class SpeechPromptPlayer: NSObject, AudioPromptPlaying {
 }
 
 extension SpeechPromptPlayer: AVSpeechSynthesizerDelegate {
+    // Both callbacks resolve the handler from the `utterance` they are handed.
+    // Using it is the whole fix: the delegate is one-to-many, and reading a
+    // single shared slot attributed a completion to whichever prompt happened
+    // to finish first.
+
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        let handler = completionHandler
-        completionHandler = nil
-        handler?()
+        completionHandlers.removeValue(forKey: utterance)?()
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        completionHandler = nil
+        completionHandlers.removeValue(forKey: utterance)
     }
 }

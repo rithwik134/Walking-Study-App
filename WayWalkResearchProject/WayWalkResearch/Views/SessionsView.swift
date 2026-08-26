@@ -80,9 +80,9 @@ struct SessionsView: View {
 
     private func row(for session: SessionFile) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: session.isTest ? "testtube.2" : "figure.walk")
+            Image(systemName: modeIcon(session.mode))
                 .font(.system(size: 17))
-                .foregroundStyle(session.isTest ? .orange : walkTint(session.walkID))
+                .foregroundStyle(session.mode == .study ? walkTint(session.walkID) : modeTint(session.mode))
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -93,8 +93,8 @@ struct SessionsView: View {
                     if let walkID = session.walkID {
                         badge(walkLabel(walkID), tint: walkTint(walkID))
                     }
-                    if session.isTest {
-                        badge("TEST", tint: .orange)
+                    if let marker = session.mode.fileNameMarker {
+                        badge(marker, tint: modeTint(session.mode))
                     }
                 }
 
@@ -134,6 +134,23 @@ struct SessionsView: View {
     private func secondaryLine(for session: SessionFile) -> String {
         let date = session.recordedAt.map(Self.dateFormatter.string(from:)) ?? session.fileName
         return "\(date) · \(byteDescription(session.byteCount))"
+    }
+
+    private func modeIcon(_ mode: SessionMode) -> String {
+        switch mode {
+        case .study: return "figure.walk"
+        case .test: return "testtube.2"
+        case .manual: return "hand.tap.fill"
+        }
+    }
+
+    /// Matches the tints used on the Home screen for each mode.
+    private func modeTint(_ mode: SessionMode) -> Color {
+        switch mode {
+        case .study: return .secondary
+        case .test: return .orange
+        case .manual: return .indigo
+        }
     }
 
     /// Matches the colours the routes are drawn in on the maps, so a session

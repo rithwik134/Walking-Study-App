@@ -49,9 +49,9 @@ final class SessionLogger {
         return documents.appendingPathComponent("Sessions", isDirectory: true)
     }
 
-    /// The marker inserted into a test run's file name. `SessionStore` looks
-    /// for exactly this token when parsing a file name back apart.
-    static let testFileNameMarker = "TEST"
+    /// Every marker a file name may carry, for `SessionStore` to recognise
+    /// when parsing one back apart.
+    static let fileNameMarkers: Set<String> = Set(SessionMode.allCases.compactMap(\.fileNameMarker))
 
     init(
         participantID: String,
@@ -81,10 +81,10 @@ final class SessionLogger {
             timeZoneIdentifier: timeZone.identifier
         )
 
-        // A test run is marked in the file name as well as in every row, so it
-        // is obvious in a Finder listing without opening anything.
-        let prefix = mode.isTest ? "WayWalk_\(Self.testFileNameMarker)_" : "WayWalk_"
-        self.fileURL = directory.appendingPathComponent("\(prefix)\(sessionID).csv")
+        // A non-study run is marked in the file name as well as in every row,
+        // so it is obvious in a Finder listing without opening anything.
+        let marker = mode.fileNameMarker.map { "\($0)_" } ?? ""
+        self.fileURL = directory.appendingPathComponent("WayWalk_\(marker)\(sessionID).csv")
 
         self.isoFormatter = ISO8601DateFormatter()
         self.isoFormatter.timeZone = timeZone

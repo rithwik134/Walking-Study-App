@@ -31,6 +31,8 @@
 		BB020000000000000000000A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000A /* SessionsView.swift */; };
 		BB020000000000000000000B /* SessionLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000B /* SessionLoggerTests.swift */; };
 		BB020000000000000000000C /* RoutePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000C /* RoutePathTests.swift */; };
+		BB0200000000000000000010 /* AudioPromptPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000010 /* AudioPromptPlayerTests.swift */; };
+		BB020000000000000000000F /* ManualWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000F /* ManualWalkView.swift */; };
 		BB020000000000000000000D /* walkA_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000D /* walkA_path.json */; };
 		BB020000000000000000000E /* walkB_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000E /* walkB_path.json */; };
 		CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */; };
@@ -78,6 +80,8 @@
 		BB010000000000000000000A /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		BB010000000000000000000B /* SessionLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLoggerTests.swift; sourceTree = "<group>"; };
 		BB010000000000000000000C /* RoutePathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathTests.swift; sourceTree = "<group>"; };
+		BB0100000000000000000010 /* AudioPromptPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPromptPlayerTests.swift; sourceTree = "<group>"; };
+		BB010000000000000000000F /* ManualWalkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualWalkView.swift; sourceTree = "<group>"; };
 		BB010000000000000000000D /* walkA_path.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkA_path.json; sourceTree = "<group>"; };
 		BB010000000000000000000E /* walkB_path.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkB_path.json; sourceTree = "<group>"; };
 		D168F585940542C2A28CEFAD /* WayWalkResearchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WayWalkResearchApp.swift; sourceTree = "<group>"; };
@@ -115,6 +119,7 @@
 				F75DF2887B7C408690FF61EE /* WaypointTestView.swift */,
 				BB0100000000000000000009 /* RoutePathGeneratorView.swift */,
 				BB010000000000000000000A /* SessionsView.swift */,
+				BB010000000000000000000F /* ManualWalkView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -168,6 +173,7 @@
 				AABB03223344556677889902 /* RouteDataTests.swift */,
 				BB010000000000000000000B /* SessionLoggerTests.swift */,
 				BB010000000000000000000C /* RoutePathTests.swift */,
+				BB0100000000000000000010 /* AudioPromptPlayerTests.swift */,
 			);
 			path = WayWalkResearchTests;
 			sourceTree = "<group>";
@@ -351,6 +357,7 @@
 				BB0200000000000000000008 /* WaypointMapContent.swift in Sources */,
 				BB0200000000000000000009 /* RoutePathGeneratorView.swift in Sources */,
 				BB020000000000000000000A /* SessionsView.swift in Sources */,
+				BB020000000000000000000F /* ManualWalkView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +368,7 @@
 				AABB04223344556677889903 /* RouteDataTests.swift in Sources */,
 				BB020000000000000000000B /* SessionLoggerTests.swift in Sources */,
 				BB020000000000000000000C /* RoutePathTests.swift in Sources */,
+				BB0200000000000000000010 /* AudioPromptPlayerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

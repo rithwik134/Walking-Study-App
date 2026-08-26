@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var selectedWalkID: WalkID = .walkA
     @State private var selectedLevel: InformationLevel = .navigationOnly
     @State private var testModeEnabled = false
+    @State private var manualModeEnabled = false
     @State private var showingMap = false
     @State private var showingActiveWalk = false
     @State private var loadError: String?
@@ -27,7 +28,30 @@ struct HomeView: View {
 
     private var canStart: Bool { !trimmedParticipantID.isEmpty }
 
-    private var mode: SessionMode { testModeEnabled ? .test : .study }
+    /// The two mode toggles are mutually exclusive — each presents a different
+    /// screen, so "both on" has no meaning. Turning one on turns the other
+    /// off rather than silently letting one win.
+    private var mode: SessionMode {
+        if manualModeEnabled { return .manual }
+        if testModeEnabled { return .test }
+        return .study
+    }
+
+    private var modeTint: Color {
+        switch mode {
+        case .study: return .accentColor
+        case .test: return .orange
+        case .manual: return .indigo
+        }
+    }
+
+    private var startButtonTitle: String {
+        switch mode {
+        case .study: return "Start Walk"
+        case .test: return "Start Test Mode"
+        case .manual: return "Start Manual Mode"
+        }
+    }
 
     private var selectedWalk: Walk? { walks[selectedWalkID] }
 
@@ -38,7 +62,7 @@ struct HomeView: View {
                 routeSection
                 conditionSection
 
-                testingSection
+                modesSection
 
                 if let loadError {
                     Section {
@@ -81,13 +105,24 @@ struct HomeView: View {
             .sheet(isPresented: $showingMap) {
                 RouteMapView()
             }
+            .onChange(of: testModeEnabled) { _, isOn in
+                if isOn { manualModeEnabled = false }
+            }
+            .onChange(of: manualModeEnabled) { _, isOn in
+                if isOn { testModeEnabled = false }
+            }
             .fullScreenCover(isPresented: $showingActiveWalk) {
                 if let loadedWalk {
-                    if testModeEnabled {
+                    switch mode {
+                    case .test:
                         WaypointTestView(session: session, walk: loadedWalk) {
                             showingActiveWalk = false
                         }
-                    } else {
+                    case .manual:
+                        ManualWalkView(session: session, walk: loadedWalk) {
+                            showingActiveWalk = false
+                        }
+                    case .study:
                         ActiveWalkView(session: session, walk: loadedWalk) {
                             showingActiveWalk = false
                         }
@@ -112,13 +147,14 @@ struct HomeView: View {
             }
         } header: {
             Text("Participant")
-        } footer: {
-            // Deliberately blank on every launch rather than remembered: an ID
-            // auto-filled from the previous participant is a silent
-            // mislabelling of study data, which is far worse than retyping
-            // four characters.
-            Text("Required. Written into the file name and every log row.")
         }
+        // No footer: "required" is already said under the Start button, and
+        // the row of space it cost is what let the second mode toggle stay
+        // above the fold.
+        //
+        // Deliberately blank on every launch rather than remembered — an ID
+        // auto-filled from the previous participant is a silent mislabelling
+        // of study data, which is far worse than retyping four characters.
     }
 
     private var routeSection: some View {
@@ -158,30 +194,43 @@ struct HomeView: View {
                 }
             }
             .pickerStyle(.segmented)
+        }
+        // The per-condition explanation used to sit here. It went when the
+        // second mode toggle arrived: the segment labels already say which is
+        // which, and the full script for the active condition is shown on the
+        // preview card during the walk, so it was the least load-bearing line
+        // on the screen.
+    }
 
-            Text(selectedLevel.explanation)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private var modesSection: some View {
+        Section {
+            Toggle("Waypoint Test Mode", isOn: $testModeEnabled.animation())
+            Toggle("Manual Mode", isOn: $manualModeEnabled.animation())
+        } header: {
+            Text("Modes")
+        } footer: {
+            modeFooter
         }
     }
 
-    private var testingSection: some View {
-        Section {
-            Toggle("Waypoint Test Mode", isOn: $testModeEnabled.animation())
-        } header: {
-            Text("Testing")
-        } footer: {
-            if testModeEnabled {
-                Label(
-                    "This run is still recorded, but the file is named TEST and every row is marked session_mode = test, so it cannot be mistaken for a participant's data.",
-                    systemImage: "info.circle"
-                )
+    /// One line, so adding a second toggle did not push the Start button off
+    /// the screen. Says what the active mode does and how its file is marked.
+    @ViewBuilder
+    private var modeFooter: some View {
+        switch mode {
+        case .test:
+            Label("Live waypoint map. Recorded, file marked TEST.", systemImage: "info.circle")
                 .font(.caption)
                 .foregroundStyle(.orange)
-            } else {
-                Text("Shows a live map of every waypoint instead of the walk screen, for checking positions and radii.")
-            }
+        case .manual:
+            Label("You choose when each prompt plays. Recorded, file marked MANUAL.",
+                  systemImage: "info.circle")
+                .font(.caption)
+                .foregroundStyle(.indigo)
+        case .study:
+            // Nothing: with neither mode on there is nothing to warn about,
+            // and the empty footer keeps both toggles on screen.
+            EmptyView()
         }
     }
 
@@ -192,13 +241,13 @@ struct HomeView: View {
             summaryLine
 
             Button(action: startWalk) {
-                Text(testModeEnabled ? "Start Test Mode" : "Start Walk")
+                Text(startButtonTitle)
                     .font(.title2.bold())
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent)
-            .tint(testModeEnabled ? .orange : .accentColor)
+            .tint(modeTint)
             .disabled(!canStart)
         }
         .padding()
@@ -212,13 +261,13 @@ struct HomeView: View {
         Group {
             if canStart {
                 HStack(spacing: 6) {
-                    if testModeEnabled {
-                        Text("TEST")
+                    if let marker = mode.fileNameMarker {
+                        Text(marker)
                             .font(.caption2.bold())
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(.orange.opacity(0.2))
-                            .foregroundStyle(.orange)
+                            .background(modeTint.opacity(0.2))
+                            .foregroundStyle(modeTint)
                             .clipShape(Capsule())
                     }
                     Text(trimmedParticipantID)

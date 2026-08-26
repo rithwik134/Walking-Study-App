@@ -212,7 +212,7 @@ final class SessionLoggerTests: XCTestCase {
         let listed = SessionStore(directory: directory).sessions()
         XCTAssertEqual(listed.count, 1)
         let session = listed[0]
-        XCTAssertTrue(session.isTest)
+        XCTAssertEqual(session.mode, .test)
         XCTAssertEqual(session.participantID, "P09", "the TEST marker must not be read as the participant")
         XCTAssertEqual(session.walkID, .walkB)
         XCTAssertNotNil(session.recordedAt)
@@ -221,7 +221,7 @@ final class SessionLoggerTests: XCTestCase {
     func testStoreMarksOrdinaryFilesAsNotTest() {
         makeLogger(participant: "P09", walk: .walkB).finish()
         let session = try! XCTUnwrap(SessionStore(directory: directory).sessions().first)
-        XCTAssertFalse(session.isTest)
+        XCTAssertEqual(session.mode, .study)
         XCTAssertEqual(session.participantID, "P09")
     }
 
@@ -471,5 +471,69 @@ final class SessionLoggerTests: XCTestCase {
     func testStoreOnMissingDirectoryIsEmptyRatherThanACrash() {
         let missing = directory.appendingPathComponent("nope", isDirectory: true)
         XCTAssertTrue(SessionStore(directory: missing).sessions().isEmpty)
+    }
+
+    func testManualModeIsMarkedInTheFileNameAndEveryRow() {
+        let logger = makeLogger(participant: "P05", walk: .walkA, mode: .manual)
+        logger.append(type: .waypointTrigger, waypoint: makeWaypoint())
+        logger.finish()
+
+        let name = logger.fileURL.lastPathComponent
+        XCTAssertTrue(name.hasPrefix("WayWalk_MANUAL_P05_walkA_"), "unexpected filename \(name)")
+
+        let rows = parse(logger.csvText).dropFirst()
+        XCTAssertFalse(rows.isEmpty)
+        for row in rows {
+            XCTAssertEqual(column("session_mode", in: row), "manual")
+            XCTAssertEqual(column("participant_id", in: row), "P05")
+        }
+    }
+
+    func testStoreParsesAManualFileNameBackToTheRightParticipant() {
+        let logger = makeLogger(participant: "P08", walk: .walkA, mode: .manual)
+        logger.finish()
+
+        let listed = SessionStore(directory: directory).sessions()
+        XCTAssertEqual(listed.count, 1)
+        let session = listed[0]
+        XCTAssertEqual(session.mode, .manual)
+        XCTAssertEqual(session.participantID, "P08", "the MANUAL marker must not be read as the participant")
+        XCTAssertEqual(session.walkID, .walkA)
+        XCTAssertNotNil(session.recordedAt)
+    }
+
+    /// In manual mode the two timestamps mean different things: arrival is when
+    /// CoreLocation reported the radius, and the event time is when the
+    /// researcher actually cued the prompt. The gap between them is the thing
+    /// the mode exists to measure, so both must survive into the CSV.
+    func testManualRowKeepsArrivalAndPlayTimesSeparate() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let logger = makeLogger(mode: .manual, startedAt: start)
+        let arrived = start.addingTimeInterval(60)
+        let played = start.addingTimeInterval(75)
+
+        logger.append(
+            type: .waypointTrigger,
+            timestamp: played,
+            regionEntryTime: arrived,
+            waypoint: makeWaypoint()
+        )
+
+        let row = parse(logger.csvText).last!
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        let entry = try! XCTUnwrap(formatter.date(from: column("region_entry_local", in: row)))
+        let local = try! XCTUnwrap(formatter.date(from: column("time_local", in: row)))
+        XCTAssertEqual(local.timeIntervalSince(entry), 15, accuracy: 0.001)
+        XCTAssertEqual(column("elapsed_s", in: row), "75.0")
+    }
+
+    func testEveryModeMarkerIsDistinctAndStudyHasNone() {
+        XCTAssertNil(SessionMode.study.fileNameMarker)
+        XCTAssertEqual(SessionMode.test.fileNameMarker, "TEST")
+        XCTAssertEqual(SessionMode.manual.fileNameMarker, "MANUAL")
+        let markers = SessionMode.allCases.compactMap(\.fileNameMarker)
+        XCTAssertEqual(Set(markers).count, markers.count, "markers must be unambiguous in a filename")
     }
 }

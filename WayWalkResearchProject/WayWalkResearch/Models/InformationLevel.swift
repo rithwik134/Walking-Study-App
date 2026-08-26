@@ -33,14 +33,40 @@ enum InformationLevel: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Whether a walk is real data collection or a researcher testing the route.
+/// How a walk is being run: real data collection, a route test, or a manually
+/// cued walk.
 ///
-/// Recorded in the file name *and* in every row: a test run that looks like a
-/// participant's session is worse than no recording at all, and a file name
-/// alone is one rename away from being lost.
-enum SessionMode: String, Codable {
+/// Recorded in the file name *and* in every row: a run that is not real data
+/// but looks like a participant's session is worse than no recording at all,
+/// and a file name alone is one rename away from being lost.
+enum SessionMode: String, Codable, CaseIterable {
+    /// Real data collection. Prompts fire automatically on arrival.
     case study
+    /// Live waypoint map for checking positions and radii.
     case test
+    /// Prompts do not fire on arrival — the researcher presses a button to
+    /// play each one, with the trigger radius shown as a cue for roughly when.
+    case manual
 
-    var isTest: Bool { self == .test }
+    /// Marker inserted into the file name. `SessionStore` looks for exactly
+    /// these tokens when taking a file name back apart, so they must stay in
+    /// sync with the parser.
+    var fileNameMarker: String? {
+        switch self {
+        case .study: return nil
+        case .test: return "TEST"
+        case .manual: return "MANUAL"
+        }
+    }
+
+    /// Whether this run produced something other than ordinary study data.
+    var isMarked: Bool { fileNameMarker != nil }
+
+    var displayName: String {
+        switch self {
+        case .study: return "Study"
+        case .test: return "Test"
+        case .manual: return "Manual"
+        }
+    }
 }
