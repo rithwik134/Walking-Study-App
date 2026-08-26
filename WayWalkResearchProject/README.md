@@ -84,8 +84,8 @@ raises, and the session end.
 
 Columns: `session_id, participant_id, walk, information_level, session_mode,
 event_index, event_type, time_iso, time_local, elapsed_s, region_entry_local,
-waypoint_order, waypoint_id, waypoint_name, latitude, longitude,
-gps_accuracy_m, note`.
+waypoint_order, waypoint_id, waypoint_name, trigger_source, latitude,
+longitude, gps_accuracy_m, note`.
 
 Two timing details worth knowing:
 
@@ -97,6 +97,18 @@ Two timing details worth knowing:
   `region_entry_local` is when CoreLocation reported arrival;
   `time_local` is when the prompt started. Pick whichever matches how you
   are segmenting the physiological data.
+
+### Forced prompts are marked
+
+Every walk screen has a green **Play waypoint n** button. It is a failsafe: if
+a geofence does not fire, the walk would otherwise stall there forever, since
+the next waypoint is only armed once the current one fires. Pressing it plays
+the instruction the participant was owed and unblocks the rest of the route.
+
+Those rows carry `trigger_source = manual`; ones the participant's own arrival
+produced carry `geofence`. **This distinction matters for analysis** — a forced
+prompt is not evidence the participant was at that waypoint, and may mean they
+were nowhere near it. Filter or annotate accordingly.
 
 The file is rewritten from scratch after every single event, so if the app
 crashes or iOS terminates it mid-walk, everything up to that moment is

@@ -536,4 +536,40 @@ final class SessionLoggerTests: XCTestCase {
         let markers = SessionMode.allCases.compactMap(\.fileNameMarker)
         XCTAssertEqual(Set(markers).count, markers.count, "markers must be unambiguous in a filename")
     }
+
+    // MARK: - Trigger source
+
+    /// A prompt the researcher forced is not the same observation as one the
+    /// participant's arrival produced. If both logged identically, a rescued
+    /// walk would be silently indistinguishable from a clean one.
+    func testTriggerSourceDistinguishesForcedPromptsFromArrivals() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let logger = makeLogger(startedAt: start)
+
+        logger.append(
+            type: .waypointTrigger, timestamp: start.addingTimeInterval(60),
+            waypoint: makeWaypoint(id: "a1"), triggerSource: .geofence
+        )
+        logger.append(
+            type: .waypointTrigger, timestamp: start.addingTimeInterval(120),
+            waypoint: makeWaypoint(id: "a2", order: 2), triggerSource: .manual
+        )
+
+        let rows = parse(logger.csvText)
+        XCTAssertEqual(column("trigger_source", in: rows[2]), "geofence")
+        XCTAssertEqual(column("trigger_source", in: rows[3]), "manual")
+    }
+
+    /// Only waypoint rows carry a source — a flag or a session boundary was
+    /// not "triggered" by anything.
+    func testNonWaypointRowsHaveNoTriggerSource() {
+        let logger = makeLogger()
+        logger.append(type: .flag)
+        logger.finish()
+
+        for row in parse(logger.csvText).dropFirst() where
+            column("event_type", in: row) != "waypoint_trigger" {
+            XCTAssertEqual(column("trigger_source", in: row), "")
+        }
+    }
 }

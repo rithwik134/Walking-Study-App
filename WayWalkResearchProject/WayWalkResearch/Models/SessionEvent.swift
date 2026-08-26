@@ -11,6 +11,19 @@ enum SessionEventType: String, Codable {
     case sessionEnd = "session_end"
 }
 
+/// What caused a waypoint's prompt to play.
+///
+/// A prompt the researcher forced is not the same observation as one the
+/// participant's own arrival produced — the participant may not have been at
+/// the waypoint, or even near it. Recording which is which per row is what
+/// keeps a rescued walk analysable instead of quietly contaminated.
+enum TriggerSource: String, Codable {
+    /// Fired by CoreLocation reporting arrival, after the dwell confirmation.
+    case geofence
+    /// Played by the researcher pressing the cue button.
+    case manual
+}
+
 /// One row of a session log.
 ///
 /// `timestamp` is always stamped at the instant the event happened — for a
@@ -34,6 +47,10 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     let waypointName: String?
     let waypointOrder: Int?
 
+    /// `waypointTrigger` only: whether the participant's arrival fired this or
+    /// the researcher did.
+    let triggerSource: TriggerSource?
+
     let latitude: Double?
     let longitude: Double?
     let horizontalAccuracy: Double?
@@ -50,6 +67,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         waypointID: String? = nil,
         waypointName: String? = nil,
         waypointOrder: Int? = nil,
+        triggerSource: TriggerSource? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
         horizontalAccuracy: Double? = nil,
@@ -63,6 +81,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         self.waypointID = waypointID
         self.waypointName = waypointName
         self.waypointOrder = waypointOrder
+        self.triggerSource = triggerSource
         self.latitude = latitude
         self.longitude = longitude
         self.horizontalAccuracy = horizontalAccuracy

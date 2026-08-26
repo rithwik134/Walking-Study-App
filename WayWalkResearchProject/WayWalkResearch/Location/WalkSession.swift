@@ -335,19 +335,31 @@ final class WalkSession: NSObject, ObservableObject {
         beginConfirmation(for: waypoint)
     }
 
-    /// Manual mode: play the current waypoint's prompt now.
+    /// Play the current waypoint's prompt now, without waiting for arrival.
+    ///
+    /// Two callers, same mechanics:
+    ///
+    /// - **Manual mode**, where this is the only way a prompt ever plays.
+    /// - **A normal walk**, where it is the failsafe: if a geofence does not
+    ///   fire, the walk would otherwise stall at that waypoint forever, since
+    ///   the next one is only armed once the current one fires. Forcing it
+    ///   both delivers the instruction the participant was owed and unblocks
+    ///   the rest of the route.
     ///
     /// Deliberately callable whether or not the participant is inside the
-    /// radius — the radius is guidance about roughly when the cue is due, not
-    /// a precondition. Repeated presses queue rather than interrupt, because
+    /// radius — a failsafe that only works when the geofence agrees is not a
+    /// failsafe. Repeated presses queue rather than interrupt, because
     /// `AVSpeechSynthesizer.speak` appends to its own queue and nothing here
     /// calls `stop()` mid-walk.
+    ///
+    /// The resulting row is marked `trigger_source = manual`, so a forced
+    /// prompt is never mistaken in analysis for the participant's own arrival.
     func playCurrentWaypoint() {
-        guard isActive, sessionMode == .manual, currentIndex < walkQueue.count else { return }
+        guard isActive, currentIndex < walkQueue.count else { return }
         let waypoint = walkQueue[currentIndex]
         guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
 
-        deliverPrompt(for: waypoint, at: Date(), arrivedAt: pendingArrivalTime)
+        deliverPrompt(for: waypoint, at: Date(), arrivedAt: pendingArrivalTime, source: .manual)
     }
 
     /// Cancels an in-progress dwell confirmation if CoreLocation reports the
@@ -469,7 +481,7 @@ final class WalkSession: NSObject, ObservableObject {
 
         clearPendingConfirmation()
         confirmationTask = nil
-        deliverPrompt(for: waypoint, at: firedAt, arrivedAt: arrivalTime)
+        deliverPrompt(for: waypoint, at: firedAt, arrivedAt: arrivalTime, source: .geofence)
     }
 
     /// Records the waypoint, speaks it, and advances to the next one.
@@ -483,12 +495,18 @@ final class WalkSession: NSObject, ObservableObject {
     /// the radius. In manual mode that is deliberately not the same as
     /// `firedAt`: the gap between them is how long the researcher waited
     /// before cueing, which is the thing this mode exists to capture.
-    private func deliverPrompt(for waypoint: Waypoint, at firedAt: Date, arrivedAt: Date?) {
+    private func deliverPrompt(
+        for waypoint: Waypoint,
+        at firedAt: Date,
+        arrivedAt: Date?,
+        source: TriggerSource
+    ) {
         logger?.append(
             type: .waypointTrigger,
             timestamp: firedAt,
             regionEntryTime: arrivedAt,
             waypoint: waypoint,
+            triggerSource: source,
             latitude: currentLatitude,
             longitude: currentLongitude,
             horizontalAccuracy: currentAccuracy

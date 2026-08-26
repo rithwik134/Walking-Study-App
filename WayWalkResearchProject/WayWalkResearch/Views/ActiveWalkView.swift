@@ -170,6 +170,7 @@ struct ActiveWalkView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            manualTriggerControls
             flagControls
 
             if showDebug { debugPanel }
@@ -187,6 +188,44 @@ struct ActiveWalkView: View {
         }
         .padding()
         .background(.thinMaterial)
+    }
+
+    /// Failsafe for a geofence that does not fire.
+    ///
+    /// Without it a missed trigger is unrecoverable: the next waypoint is only
+    /// armed once the current one fires, so the walk stops dead and the rest
+    /// of the route produces nothing — with a participant standing there.
+    /// Forcing the prompt delivers the instruction they were owed and unblocks
+    /// the sequence.
+    private var manualTriggerControls: some View {
+        VStack(spacing: 4) {
+            Button {
+                session.playCurrentWaypoint()
+            } label: {
+                Label(
+                    isRouteComplete
+                        ? "Route complete"
+                        : "Play waypoint \(session.currentWaypointNumber)",
+                    systemImage: isRouteComplete ? "checkmark.circle.fill" : "speaker.wave.2.fill"
+                )
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .disabled(isRouteComplete)
+
+            if !isRouteComplete {
+                Text("Failsafe — plays now and moves on. Logged as trigger_source = manual.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var isRouteComplete: Bool {
+        !walk.waypoints.indices.contains(session.currentWaypointNumber - 1)
     }
 
     private var flagControls: some View {
