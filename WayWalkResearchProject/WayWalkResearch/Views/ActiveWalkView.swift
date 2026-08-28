@@ -217,7 +217,7 @@ struct ActiveWalkView: View {
             .disabled(isRouteComplete)
 
             if !isRouteComplete {
-                Text("Failsafe — plays now and moves on. Logged as trigger_source = manual.")
+                Text("Failsafe — plays now and moves on.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -357,7 +357,7 @@ struct WalkSummaryView: View {
                 if session.triggeredWaypointIDs.count < walk.waypoints.count {
                     Section {
                         Label(
-                            "Not every waypoint fired. The log records exactly which ones did, so this session can be judged on its merits rather than assumed complete.",
+                            "Not every waypoint fired.",
                             systemImage: "exclamationmark.triangle.fill"
                         )
                         .font(.footnote)
@@ -370,7 +370,7 @@ struct WalkSummaryView: View {
                         ShareLink(item: url) {
                             Label("Export \(url.lastPathComponent)", systemImage: "square.and.arrow.up")
                         }
-                        Text("Also saved on the device — reachable from Past Sessions, the Files app, or Finder while tethered.")
+                        Text("Also saved on the device.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {

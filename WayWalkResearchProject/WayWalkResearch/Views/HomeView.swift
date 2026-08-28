@@ -219,11 +219,11 @@ struct HomeView: View {
     private var modeFooter: some View {
         switch mode {
         case .test:
-            Label("Live waypoint map. Recorded, file marked TEST.", systemImage: "info.circle")
+            Label("Recorded, file marked TEST.", systemImage: "info.circle")
                 .font(.caption)
                 .foregroundStyle(.orange)
         case .manual:
-            Label("You choose when each prompt plays. Recorded, file marked MANUAL.",
+            Label("Recorded, file marked MANUAL.",
                   systemImage: "info.circle")
                 .font(.caption)
                 .foregroundStyle(.indigo)
