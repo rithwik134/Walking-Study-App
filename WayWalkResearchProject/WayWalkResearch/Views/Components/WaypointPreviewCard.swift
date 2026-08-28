@@ -26,14 +26,6 @@ struct WaypointPreviewCard: View {
         VStack(alignment: .leading, spacing: 12) {
             header
 
-            HStack(spacing: 16) {
-                metric("Radius", String(format: "%.0f m", waypoint.triggerRadius))
-                metric("Lat", String(format: "%.5f", waypoint.latitude))
-                metric("Lng", String(format: "%.5f", waypoint.longitude))
-            }
-
-            Divider()
-
             switch display {
             case .both:
                 bothConditions

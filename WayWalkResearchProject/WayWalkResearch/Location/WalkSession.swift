@@ -2,6 +2,22 @@ import Foundation
 import CoreLocation
 import Combine
 
+/// The only status the researcher screens surface, shown as a floating banner
+/// under the header.
+///
+/// Deliberately just two cases. An earlier free-text `statusMessage` narrated
+/// every internal transition — "Waiting to arrive at…", "Confirming arrival
+/// at…" — which meant a permanent line of text that was almost always saying
+/// something unremarkable, and so stopped being read at all. These are the two
+/// states worth interrupting for: a prompt is being spoken right now, or the
+/// walk is over.
+enum WalkBanner: Equatable {
+    /// A prompt is being spoken. Shown for the duration of the speech.
+    case playing(waypointName: String)
+    /// The route finished or the walk was ended. Stays on screen.
+    case ended
+}
+
 /// Drives one walk: monitors a geofence for exactly one waypoint at a time,
 /// plays the correct prompt exactly once when entered, and never repeats a
 /// waypoint unless the walk is restarted. Waypoints are handled strictly in
@@ -27,7 +43,10 @@ import Combine
 @MainActor
 final class WalkSession: NSObject, ObservableObject {
     @Published var isActive = false
-    @Published var statusMessage = "Not started"
+
+    /// Nil for most of a walk — see `WalkBanner`.
+    @Published private(set) var banner: WalkBanner?
+
     @Published var lastTriggeredWaypointName: String?
     @Published private(set) var triggeredWaypointIDs: Set<String> = []
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -69,9 +88,9 @@ final class WalkSession: NSObject, ObservableObject {
     /// silently losing study data.
     @Published private(set) var loggingError: String?
 
-    /// Most recent CoreLocation failure, kept separate from `statusMessage`
-    /// so an error cannot hide which waypoint is armed. Cleared as soon as
-    /// fixes start arriving again.
+    /// Most recent CoreLocation failure. Kept separate from `banner` so an
+    /// error cannot hide a prompt that is playing. Cleared as soon as fixes
+    /// start arriving again.
     @Published private(set) var locationError: String?
 
     private var lastFlagEventID: UUID?
@@ -160,6 +179,7 @@ final class WalkSession: NSObject, ObservableObject {
         loggingError = nil
         locationError = nil
         lastSessionFileURL = nil
+        banner = nil
         cancelConfirmation()
         isActive = true
 
@@ -183,7 +203,7 @@ final class WalkSession: NSObject, ObservableObject {
 
     func end() {
         isActive = false
-        statusMessage = "Walk ended"
+        banner = .ended
         isNextWaypointArmed = false
         isInsideCurrentRadius = false
         cancelConfirmation()
@@ -271,8 +291,11 @@ final class WalkSession: NSObject, ObservableObject {
         }
 
         guard currentIndex < walkQueue.count else {
-            statusMessage = "Route complete"
             isNextWaypointArmed = false
+            // If a prompt is still being spoken, its completion sets this
+            // instead — otherwise the last waypoint's banner would be replaced
+            // before it had been read.
+            if banner == nil { banner = .ended }
             return
         }
 
@@ -299,7 +322,6 @@ final class WalkSession: NSObject, ObservableObject {
         startStateRecheck(for: region)
 
         isNextWaypointArmed = true
-        statusMessage = "Waiting to arrive at \(waypoint.name)"
     }
 
     /// Single funnel for both didEnterRegion and didDetermineState. Starts
@@ -323,7 +345,6 @@ final class WalkSession: NSObject, ObservableObject {
         if sessionMode == .manual {
             isInsideCurrentRadius = true
             if pendingArrivalTime == nil { pendingArrivalTime = Date() }
-            statusMessage = "At \(waypoint.name) — ready to play"
             return
         }
 
@@ -386,7 +407,6 @@ final class WalkSession: NSObject, ObservableObject {
         pendingWaypointID = waypoint.id
         pendingArrivalTime = Date()
         isConfirmingArrival = true
-        statusMessage = "Confirming arrival at \(waypoint.name)…"
 
         confirmationTask = Task { [weak self] in
             guard let self else { return }
@@ -403,12 +423,7 @@ final class WalkSession: NSObject, ObservableObject {
     private func cancelConfirmation() {
         confirmationTask?.cancel()
         confirmationTask = nil
-        let pendingID = pendingWaypointID
         clearPendingConfirmation()
-        guard let pendingID else { return }
-        if isActive, currentIndex < walkQueue.count, walkQueue[currentIndex].id == pendingID {
-            statusMessage = "Waiting to arrive at \(walkQueue[currentIndex].name)"
-        }
     }
 
     /// Drops the in-flight confirmation state, making the waypoint eligible to
@@ -516,7 +531,6 @@ final class WalkSession: NSObject, ObservableObject {
         triggeredWaypointIDs.insert(waypoint.id)
         lastTriggeredWaypointName = waypoint.name
         isNextWaypointArmed = false
-        statusMessage = "Playing: \(waypoint.name)"
 
         playPrompt(for: waypoint)
 
@@ -529,12 +543,36 @@ final class WalkSession: NSObject, ObservableObject {
     /// contains the navigation instruction at its start, so the two are never
     /// concatenated or played back to back.
     private func playPrompt(for waypoint: Waypoint) {
+        let script = waypoint.script(for: informationLevel)
+
+        // Context-only waypoints have no navigation script, so in Navigation
+        // Only nothing is spoken. Claiming "Playing" for silence would be a
+        // lie, and the completion may never arrive for an empty utterance,
+        // which would leave the banner stuck.
+        guard !script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        let name = waypoint.name
+        banner = .playing(waypointName: name)
         audioPlayer.play(
             key: waypoint.audioKey(for: informationLevel),
-            script: waypoint.script(for: informationLevel),
-            completion: nil
-        )
+            script: script
+        ) { [weak self] in
+            // Delegate callbacks are not guaranteed on the main actor.
+            Task { @MainActor in self?.promptDidFinish(waypointName: name) }
+        }
     }
+
+    /// Clears the banner when the speech that raised it ends.
+    ///
+    /// Guarded on the banner still being *this* prompt's: where waypoints are
+    /// close enough to queue, a later prompt has already replaced the banner
+    /// and the earlier one finishing must not wipe it.
+    private func promptDidFinish(waypointName: String) {
+        guard banner == .playing(waypointName: waypointName) else { return }
+        banner = isRouteComplete ? .ended : nil
+    }
+
+    private var isRouteComplete: Bool { currentIndex >= walkQueue.count }
 }
 
 extension WalkSession: CLLocationManagerDelegate {

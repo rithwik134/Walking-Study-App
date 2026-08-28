@@ -204,10 +204,12 @@ final class RouteDataTests: XCTestCase {
 
     // MARK: - Waypoint name consistency
 
-    func testWaypointNamesMatchTheirIdentifiers() throws {
+    /// Names are what the researcher sees in the banner and preview card, so
+    /// they track the waypoint's position in the route rather than its id.
+    func testWaypointNamesMatchTheirPositionInTheRoute() throws {
         for wp in try allWaypoints() {
-            XCTAssertEqual(wp.name, "Waypoint \(wp.id)",
-                           "\(wp.id) name should be \"Waypoint \(wp.id)\" but is \"\(wp.name)\"")
+            XCTAssertEqual(wp.name, "Waypoint \(wp.order)",
+                           "\(wp.id) name should be \"Waypoint \(wp.order)\" but is \"\(wp.name)\"")
         }
     }
 

@@ -50,6 +50,7 @@ struct ManualWalkView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 map
+                    .walkStatusBanner(session.banner)
                     .overlay(alignment: .bottom) {
                         if let index = selectedIndex {
                             WaypointPreviewCard(
@@ -145,10 +146,6 @@ struct ManualWalkView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Text(session.statusMessage)
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, alignment: .leading)
 
             if let error = session.loggingError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")

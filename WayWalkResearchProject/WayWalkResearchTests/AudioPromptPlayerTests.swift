@@ -116,3 +116,109 @@ final class AudioPromptPlayerTests: XCTestCase {
         XCTAssertEqual(RecordedAudioPromptPlayer().voiceDescription, "Recorded audio")
     }
 }
+
+
+/// A stand-in audio backend whose "speech" finishes only when the test says
+/// so, making the banner's lifetime deterministic instead of dependent on how
+/// long a real sentence takes to speak.
+final class FakePromptPlayer: AudioPromptPlaying {
+    private(set) var scripts: [String] = []
+    private var pending: [() -> Void] = []
+
+    func play(key: String, script: String, completion: (() -> Void)?) {
+        scripts.append(script)
+        if let completion { pending.append(completion) }
+    }
+
+    func stop() { pending.removeAll() }
+
+    /// Completes the oldest outstanding utterance.
+    func finishOldest() {
+        guard !pending.isEmpty else { return }
+        pending.removeFirst()()
+    }
+}
+
+/// The banner is the only status the walk screens show, so its lifetime has to
+/// be exact: present while a prompt speaks, gone afterwards, and persistent
+/// once the walk is over.
+@MainActor
+final class WalkSessionBannerTests: XCTestCase {
+
+    private func makeSession(
+        level: InformationLevel = .navigationOnly
+    ) throws -> (WalkSession, Walk, FakePromptPlayer) {
+        let player = FakePromptPlayer()
+        let session = WalkSession(audioPlayer: player)
+        let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
+        // .test so these runs are marked and never mistaken for study data.
+        session.start(walk: walk, informationLevel: level,
+                      participantID: "BANNERTEST", mode: .test)
+        return (session, walk, player)
+    }
+
+    func testNoBannerWhileSimplyWalking() throws {
+        let (session, _, _) = try makeSession()
+        XCTAssertNil(session.banner, "an armed waypoint is not worth a banner")
+    }
+
+    func testBannerShowsWhileAPromptSpeaksAndClearsWhenItEnds() async throws {
+        let (session, walk, player) = try makeSession()
+
+        session.playCurrentWaypoint()
+        XCTAssertEqual(session.banner, .playing(waypointName: walk.waypoints[0].name))
+
+        player.finishOldest()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertNil(session.banner, "the banner must not outlive the speech")
+    }
+
+    /// Where waypoints queue, the earlier prompt finishing must not wipe a
+    /// banner that now belongs to a later one.
+    func testAnEarlierPromptFinishingDoesNotClearALaterBanner() async throws {
+        // Navigation + Context, because a2 is context-only and so speaks
+        // nothing at all in Navigation Only — there would be no second banner
+        // to compete with.
+        let (session, walk, player) = try makeSession(level: .navigationPlusContext)
+
+        session.playCurrentWaypoint()
+        session.playCurrentWaypoint()
+        XCTAssertEqual(session.banner, .playing(waypointName: walk.waypoints[1].name))
+
+        player.finishOldest() // waypoint 1 finishes; waypoint 2 is still speaking
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(session.banner, .playing(waypointName: walk.waypoints[1].name))
+
+        player.finishOldest()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertNil(session.banner)
+    }
+
+    func testEndingTheWalkLeavesTheEndedBannerOnScreen() throws {
+        let (session, _, _) = try makeSession()
+        session.end()
+        XCTAssertEqual(session.banner, .ended)
+    }
+
+    /// A context-only waypoint speaks nothing in Navigation Only, so claiming
+    /// "Playing" would be false — and an empty utterance may never report
+    /// completion, which would strand the banner.
+    func testSilentWaypointRaisesNoBanner() throws {
+        let player = FakePromptPlayer()
+        let session = WalkSession(audioPlayer: player)
+        let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
+        session.start(walk: walk, informationLevel: .navigationOnly,
+                      participantID: "BANNERTEST", mode: .test)
+
+        // a2 is context-only; advance onto it, then play.
+        session.playCurrentWaypoint()
+        XCTAssertEqual(session.currentWaypointNumber, 2)
+        XCTAssertTrue(walk.waypoints[1].navigationPrompt.isEmpty, "a2 should be context-only")
+
+        session.playCurrentWaypoint()
+        XCTAssertEqual(
+            session.banner, .playing(waypointName: walk.waypoints[0].name),
+            "the silent waypoint must not raise a banner of its own"
+        )
+    }
+}
