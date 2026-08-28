@@ -31,7 +31,10 @@ struct ManualWalkView: View {
         return walk.waypoints.firstIndex { $0.id == selectedWaypointID }
     }
 
-    private var isComplete: Bool { currentIndex == nil }
+    /// From the session rather than inferred locally: `currentWaypointNumber`
+    /// stays on the last waypoint once the route ends, so deriving completion
+    /// from it left the cue button offering to play waypoint 27 forever.
+    private var isComplete: Bool { session.routeIsComplete }
 
     var body: some View {
         Group {
@@ -71,7 +74,7 @@ struct ManualWalkView: View {
             }
             .navigationTitle(
                 isComplete
-                    ? "Route complete"
+                    ? "Walk finished"
                     : "Waypoint \(session.currentWaypointNumber) of \(walk.waypoints.count)"
             )
             .navigationBarTitleDisplayMode(.inline)
@@ -184,7 +187,7 @@ struct ManualWalkView: View {
             session.playCurrentWaypoint()
         } label: {
             Label(
-                isComplete ? "Route complete" : "Play waypoint \(session.currentWaypointNumber)",
+                isComplete ? "Walk finished" : "Play waypoint \(session.currentWaypointNumber)",
                 systemImage: isComplete ? "checkmark.circle.fill" : "speaker.wave.2.fill"
             )
             .font(.title3.bold())

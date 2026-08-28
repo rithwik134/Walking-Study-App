@@ -28,6 +28,11 @@ final class RecordedAudioPromptPlayer: NSObject, AudioPromptPlaying {
     private var currentCompletion: (() -> Void)?
     private var isPlaying: Bool { player != nil }
 
+    /// Silence before a prompt that was queued behind another, matching
+    /// `SpeechPromptPlayer`. Close-together waypoints otherwise run their
+    /// instructions together with no audible break.
+    private let gapBetweenQueuedPrompts: TimeInterval = 1.2
+
     override init() {
         super.init()
         do {
@@ -54,7 +59,9 @@ final class RecordedAudioPromptPlayer: NSObject, AudioPromptPlaying {
 
     func play(key: String, script: String, completion: (() -> Void)? = nil) {
         queue.append(PendingPrompt(key: key, completion: completion))
-        if !isPlaying { startNextPrompt() }
+        // Arriving into silence plays at once; anything else waits its turn and
+        // picks up the gap when the current prompt ends.
+        if !isPlaying { startNextPrompt(afterAnotherPrompt: false) }
     }
 
     /// Starts the next queued prompt, skipping any that cannot be played.
@@ -63,7 +70,7 @@ final class RecordedAudioPromptPlayer: NSObject, AudioPromptPlaying {
     /// so one absent recording cannot strand everything queued behind it.
     /// Iterative rather than recursive: a route with no recordings at all
     /// would otherwise recurse once per waypoint.
-    private func startNextPrompt() {
+    private func startNextPrompt(afterAnotherPrompt: Bool) {
         player = nil
         currentCompletion = nil
 
@@ -80,7 +87,11 @@ final class RecordedAudioPromptPlayer: NSObject, AudioPromptPlaying {
                 newPlayer.delegate = self
                 player = newPlayer
                 currentCompletion = next.completion
-                newPlayer.play()
+                if afterAnotherPrompt {
+                    newPlayer.play(atTime: newPlayer.deviceCurrentTime + gapBetweenQueuedPrompts)
+                } else {
+                    newPlayer.play()
+                }
                 return
             } catch {
                 print("Playback error for \(next.key): \(error)")
@@ -140,6 +151,6 @@ extension RecordedAudioPromptPlayer: AVAudioPlayerDelegate {
         let completion = currentCompletion
         currentCompletion = nil
         completion?()
-        startNextPrompt()
+        startNextPrompt(afterAnotherPrompt: true)
     }
 }

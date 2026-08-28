@@ -132,10 +132,21 @@ final class SpeechPromptPlayer: NSObject, AudioPromptPlaying {
         return "\(voice.name) (\(quality))"
     }
 
+    /// Silence inserted before a prompt that is queued behind another.
+    ///
+    /// Some waypoints on these routes are close enough that their geofences
+    /// overlap, so two prompts can fire seconds apart and run together as one
+    /// unbroken stream — hard to follow, and worse for a participant who
+    /// cannot see where one instruction ends and the next begins. The gap is
+    /// applied *only* when something is already speaking, so a prompt arriving
+    /// into silence is never delayed and arrival timing is unaffected.
+    private let gapBetweenQueuedPrompts: TimeInterval = 1.2
+
     func play(key: String, script: String, completion: (() -> Void)? = nil) {
         let utterance = AVSpeechUtterance(string: script)
         utterance.voice = resolveVoice()
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.preUtteranceDelay = synthesizer.isSpeaking ? gapBetweenQueuedPrompts : 0
         if let completion {
             completionHandlers[utterance] = completion
         }

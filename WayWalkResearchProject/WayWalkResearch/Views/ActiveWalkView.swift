@@ -75,7 +75,11 @@ struct ActiveWalkView: View {
 
                 controlPanel
             }
-            .navigationTitle("Waypoint \(session.currentWaypointNumber) of \(walk.waypoints.count)")
+            .navigationTitle(
+                session.routeIsComplete
+                    ? "Walk finished"
+                    : "Waypoint \(session.currentWaypointNumber) of \(walk.waypoints.count)"
+            )
             .navigationBarTitleDisplayMode(.inline)
         }
         .animation(.easeInOut(duration: 0.2), value: selectedWaypointID)
@@ -200,10 +204,11 @@ struct ActiveWalkView: View {
                 session.playCurrentWaypoint()
             } label: {
                 Label(
-                    isRouteComplete
-                        ? "Route complete"
+                    session.routeIsComplete
+                        ? "Walk finished"
                         : "Play waypoint \(session.currentWaypointNumber)",
-                    systemImage: isRouteComplete ? "checkmark.circle.fill" : "speaker.wave.2.fill"
+                    systemImage: session.routeIsComplete
+                        ? "checkmark.circle.fill" : "speaker.wave.2.fill"
                 )
                 .font(.headline)
                 .frame(maxWidth: .infinity)
@@ -211,13 +216,8 @@ struct ActiveWalkView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.green)
-            .disabled(isRouteComplete)
-
+            .disabled(session.routeIsComplete)
         }
-    }
-
-    private var isRouteComplete: Bool {
-        !walk.waypoints.indices.contains(session.currentWaypointNumber - 1)
     }
 
     private var flagControls: some View {

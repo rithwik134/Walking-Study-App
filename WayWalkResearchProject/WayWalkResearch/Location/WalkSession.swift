@@ -69,6 +69,13 @@ final class WalkSession: NSObject, ObservableObject {
     /// How the walk in progress is being run.
     @Published private(set) var sessionMode: SessionMode = .study
 
+    /// Whether every waypoint has been played.
+    ///
+    /// Published rather than inferred from `currentWaypointNumber`: that value
+    /// deliberately stays on the last waypoint once the route finishes, so a
+    /// view deriving completion from it would never see the route end.
+    @Published private(set) var routeIsComplete = false
+
     /// Manual mode only: whether the participant is currently inside the armed
     /// waypoint's trigger radius. Drives the cue button's colour — it is a
     /// hint about *when* to play, never a gate on being able to.
@@ -92,6 +99,13 @@ final class WalkSession: NSObject, ObservableObject {
     /// error cannot hide a prompt that is playing. Cleared as soon as fixes
     /// start arriving again.
     @Published private(set) var locationError: String?
+
+    /// Waypoint names whose prompts are queued or being spoken, in the order
+    /// the synthesiser will speak them. The front is what is audible *now*,
+    /// which is what the banner must show — where waypoints are close enough
+    /// to fire seconds apart, the most recently triggered one is not the one
+    /// the participant is currently hearing.
+    private var speakingQueue: [String] = []
 
     private var lastFlagEventID: UUID?
 
@@ -180,6 +194,8 @@ final class WalkSession: NSObject, ObservableObject {
         locationError = nil
         lastSessionFileURL = nil
         banner = nil
+        speakingQueue.removeAll()
+        routeIsComplete = false
         cancelConfirmation()
         isActive = true
 
@@ -203,6 +219,7 @@ final class WalkSession: NSObject, ObservableObject {
 
     func end() {
         isActive = false
+        speakingQueue.removeAll()
         banner = .ended
         isNextWaypointArmed = false
         isInsideCurrentRadius = false
@@ -292,6 +309,7 @@ final class WalkSession: NSObject, ObservableObject {
 
         guard currentIndex < walkQueue.count else {
             isNextWaypointArmed = false
+            routeIsComplete = true
             // If a prompt is still being spoken, its completion sets this
             // instead — otherwise the last waypoint's banner would be replaced
             // before it had been read.
@@ -552,7 +570,11 @@ final class WalkSession: NSObject, ObservableObject {
         guard !script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
         let name = waypoint.name
-        banner = .playing(waypointName: name)
+        speakingQueue.append(name)
+        // Only take over the banner if nothing is already being spoken —
+        // otherwise this prompt is queued behind one the participant is still
+        // listening to, and saying so would be wrong.
+        if speakingQueue.count == 1 { banner = .playing(waypointName: name) }
         audioPlayer.play(
             key: waypoint.audioKey(for: informationLevel),
             script: script
@@ -568,11 +590,16 @@ final class WalkSession: NSObject, ObservableObject {
     /// close enough to queue, a later prompt has already replaced the banner
     /// and the earlier one finishing must not wipe it.
     private func promptDidFinish(waypointName: String) {
-        guard banner == .playing(waypointName: waypointName) else { return }
-        banner = isRouteComplete ? .ended : nil
+        if let index = speakingQueue.firstIndex(of: waypointName) {
+            speakingQueue.remove(at: index)
+        }
+        // Whatever is now at the front is what the participant can hear.
+        if let nowSpeaking = speakingQueue.first {
+            banner = .playing(waypointName: nowSpeaking)
+        } else {
+            banner = routeIsComplete ? .ended : nil
+        }
     }
-
-    private var isRouteComplete: Bool { currentIndex >= walkQueue.count }
 }
 
 extension WalkSession: CLLocationManagerDelegate {

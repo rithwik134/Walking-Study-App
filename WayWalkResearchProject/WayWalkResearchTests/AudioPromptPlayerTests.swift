@@ -173,25 +173,48 @@ final class WalkSessionBannerTests: XCTestCase {
         XCTAssertNil(session.banner, "the banner must not outlive the speech")
     }
 
-    /// Where waypoints queue, the earlier prompt finishing must not wipe a
-    /// banner that now belongs to a later one.
-    func testAnEarlierPromptFinishingDoesNotClearALaterBanner() async throws {
+    /// The banner must name what the participant can *hear*, not what fired
+    /// most recently. Overlapping trigger radii on these routes mean waypoint
+    /// n+1 can fire ~2s into waypoint n's prompt, and the synthesiser queues
+    /// it — so announcing n+1 immediately would label audio that is still
+    /// several seconds away.
+    func testBannerNamesTheAudiblePromptNotTheLatestTrigger() async throws {
         // Navigation + Context, because a2 is context-only and so speaks
-        // nothing at all in Navigation Only — there would be no second banner
-        // to compete with.
+        // nothing at all in Navigation Only — there would be no queue.
         let (session, walk, player) = try makeSession(level: .navigationPlusContext)
 
         session.playCurrentWaypoint()
         session.playCurrentWaypoint()
-        XCTAssertEqual(session.banner, .playing(waypointName: walk.waypoints[1].name))
+        XCTAssertEqual(
+            session.banner, .playing(waypointName: walk.waypoints[0].name),
+            "waypoint 2 is queued behind waypoint 1, so waypoint 1 is what is playing"
+        )
 
-        player.finishOldest() // waypoint 1 finishes; waypoint 2 is still speaking
+        player.finishOldest() // waypoint 1 ends; waypoint 2 becomes audible
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(session.banner, .playing(waypointName: walk.waypoints[1].name))
 
         player.finishOldest()
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertNil(session.banner)
+    }
+
+    /// `currentWaypointNumber` deliberately stays on the last waypoint when a
+    /// route ends, so completion has to come from its own flag — otherwise the
+    /// cue button offers to play waypoint 28 forever.
+    func testRouteCompletionIsReportedOnceEveryWaypointHasPlayed() async throws {
+        let (session, walk, player) = try makeSession(level: .navigationPlusContext)
+        XCTAssertFalse(session.routeIsComplete)
+
+        for _ in walk.waypoints {
+            session.playCurrentWaypoint()
+            player.finishOldest()
+        }
+        try await Task.sleep(for: .milliseconds(200))
+
+        XCTAssertTrue(session.routeIsComplete)
+        XCTAssertEqual(session.triggeredWaypointIDs.count, walk.waypoints.count)
+        XCTAssertEqual(session.banner, .ended, "the finished banner stays on screen")
     }
 
     func testEndingTheWalkLeavesTheEndedBannerOnScreen() throws {
