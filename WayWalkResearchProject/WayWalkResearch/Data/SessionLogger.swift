@@ -37,6 +37,7 @@ final class SessionLogger {
         "event_index", "event_type",
         "time_iso", "time_local", "elapsed_s", "region_entry_local",
         "waypoint_order", "waypoint_id", "waypoint_name", "trigger_source",
+        "closest_approach_m",
         "latitude", "longitude", "gps_accuracy_m",
         "note"
     ]
@@ -111,6 +112,7 @@ final class SessionLogger {
         regionEntryTime: Date? = nil,
         waypoint: Waypoint? = nil,
         triggerSource: TriggerSource? = nil,
+        closestApproachMetres: Double? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
         horizontalAccuracy: Double? = nil,
@@ -125,6 +127,7 @@ final class SessionLogger {
             waypointName: waypoint?.name,
             waypointOrder: waypoint?.order,
             triggerSource: triggerSource,
+            closestApproachMetres: closestApproachMetres,
             latitude: latitude,
             longitude: longitude,
             horizontalAccuracy: horizontalAccuracy,
@@ -187,6 +190,7 @@ final class SessionLogger {
             event.waypointID ?? "",
             event.waypointName ?? "",
             event.triggerSource?.rawValue ?? "",
+            event.closestApproachMetres.map { String(format: "%.1f", $0) } ?? "",
             event.latitude.map { String(format: "%.6f", $0) } ?? "",
             event.longitude.map { String(format: "%.6f", $0) } ?? "",
             event.horizontalAccuracy.map { String(format: "%.1f", $0) } ?? "",

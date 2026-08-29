@@ -5,7 +5,7 @@
     "name": "Waypoint 1",
     "latitude": 51.524329,
     "longitude": -0.134513,
-    "triggerRadius": 15,
+    "triggerRadius": 5,
     "navigationPrompt": "Starting route to Central House. In 250 metres turn left onto Torrington Place",
     "contextualPrompt": "Starting route to Central House. \nHead south on Gower Street. In 250 metres turn left onto Torrington Place\n"
   },
@@ -15,7 +15,7 @@
     "name": "Waypoint 2",
     "latitude": 51.523477,
     "longitude": -0.133547,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "",
     "contextualPrompt": "You are on a moderately busy street with a wide footway and UCL buildings on either side"
   },
@@ -25,7 +25,7 @@
     "name": "Waypoint 3",
     "latitude": 51.522548,
     "longitude": -0.132614,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Cross the road ahead and turn left onto Torrington Place",
     "contextualPrompt": "Cross the road ahead and turn left onto Torrington Place using the signalled crossing. This crossing is intersected by cycleways on either side"
   },
@@ -35,7 +35,7 @@
     "name": "Waypoint 4",
     "latitude": 51.522464,
     "longitude": -0.132501,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "In 200 metres turn right into Woburn Square",
     "contextualPrompt": "In 200 metres turn right into Woburn Square.\nYou are entering the main UCL campus area, characterised by university buildings, shops and moderate pedestrian activity"
   },
@@ -45,7 +45,7 @@
     "name": "Waypoint 5",
     "latitude": 51.522752,
     "longitude": -0.131772,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Cross Malet Street then continue on Byng Place",
     "contextualPrompt": "Cross Malet Street and continue into Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
   },
@@ -55,7 +55,7 @@
     "name": "Waypoint 6",
     "latitude": 51.523664,
     "longitude": -0.130154,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right to enter Woburn Square, then continue straight for 80 metres",
     "contextualPrompt": "Turn right to enter Woburn square, then follow the path straight ahead for 80 metres. This is one of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the centre"
   },
@@ -65,7 +65,7 @@
     "name": "Waypoint 7",
     "latitude": 51.523034,
     "longitude": -0.129438,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Follow the path to continue around the square and return to the entrance",
     "contextualPrompt": "Follow the path to continue around the square heading back north to return to the entrance."
   },
@@ -75,7 +75,7 @@
     "name": "Waypoint 8",
     "latitude": 51.523696,
     "longitude": -0.129913,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "In 10 metres, turn right to exit Woburn Square. Then cross the road ahead using the crossing to enter Gordon Square",
     "contextualPrompt": "In 10 metres, turn right to exit Woburn Square. Then cross the road ahead to enter Gordon Square using the zebra crossing. The crossing is intersected by cycleways on either side"
   },
@@ -85,7 +85,7 @@
     "name": "Waypoint 9",
     "latitude": 51.523858,
     "longitude": -0.13031,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Follow the path ahead for 60 metres then turn right",
     "contextualPrompt": "Continue north through Gordon Square using the shoreline to the right. This square contains several intersecting pathways, benches and open green space"
   },
@@ -95,7 +95,7 @@
     "name": "Waypoint 10",
     "latitude": 51.524284,
     "longitude": -0.130677,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right and continue straight for 20 metres to exit Gordon Square, then turn left onto Gordon Square",
     "contextualPrompt": null
   },
@@ -105,7 +105,7 @@
     "name": "Waypoint 11",
     "latitude": 51.524183,
     "longitude": -0.130229,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "",
     "contextualPrompt": "In 30 metres turn right to exit the square, then turn left to head north along Gordon Square via the narrow pavement"
   },
@@ -115,7 +115,7 @@
     "name": "Waypoint 12",
     "latitude": 51.524517,
     "longitude": -0.130506,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "In 60 metres, turn left onto Gordon Square.",
     "contextualPrompt": "In 60 metres turn left onto Gordon Square"
   },
@@ -125,7 +125,7 @@
     "name": "Waypoint 13",
     "latitude": 51.524909,
     "longitude": -0.130953,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn left onto Gordon Square",
     "contextualPrompt": "Turn left to continue west along Gordon Square. A cycleway intersects the upcoming corner and access to vehicles is prohibited"
   },
@@ -135,7 +135,7 @@
     "name": "Waypoint 14",
     "latitude": 51.524928,
     "longitude": -0.13119,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "In 60 metres, turn right onto Gordon Street",
     "contextualPrompt": "In 60 metres, turn right onto Gordon Street. This mixed-use street combines pedestrian space, seating, tables and planters"
   },
@@ -145,7 +145,7 @@
     "name": "Waypoint 15",
     "latitude": 51.524681,
     "longitude": -0.131871,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right onto Gordon Street then cross the road using the crossing and continue straight for 200 metres",
     "contextualPrompt": "Turn right onto Gordon Street then cross the road using the zebra crossing and continue north for 200 metres"
   },
@@ -155,7 +155,7 @@
     "name": "Waypoint 16",
     "latitude": 51.524848,
     "longitude": -0.132262,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "",
     "contextualPrompt": "This street has a contemporary yellow aesthetic design with wide pedestrian areas, bicycle racks and trees in raised planters"
   },
@@ -165,7 +165,7 @@
     "name": "Waypoint 17",
     "latitude": 51.525832,
     "longitude": -0.133223,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Cross Gower Place and continue straight for 50 metres",
     "contextualPrompt": "Cross Gower Place and continue north for 50 metres. One-way traffic approaches from the right"
   },
@@ -175,7 +175,7 @@
     "name": "Waypoint 18",
     "latitude": 51.526226,
     "longitude": -0.133585,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Cross over Euston Road ahead and then turn right",
     "contextualPrompt": "Cross Euston Road ahead, then turn right. This is an unsignalled crossing with four lanes of traffic"
   },
@@ -185,7 +185,7 @@
     "name": "Waypoint 19",
     "latitude": 51.52639,
     "longitude": -0.133874,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right to cross Melton Street and continue straight for 100 metres.",
     "contextualPrompt": "Turn right to cross Melton Street via the staggered signalled crossing, then continue east on Euston Road for 100 metres. This is a major transport corridor. University College Hospital is located in the area"
   },
@@ -195,7 +195,7 @@
     "name": "Waypoint 20",
     "latitude": 51.526852,
     "longitude": -0.13256,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn left onto the path to enter Euston Station forecourt",
     "contextualPrompt": "Turn left onto the path to enter Euston Station forecourt"
   },
@@ -205,7 +205,7 @@
     "name": "Waypoint 21",
     "latitude": 51.526979,
     "longitude": -0.13267,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "In 100 metres turn right",
     "contextualPrompt": "In 100m turn right. This is one of London's principal railway and underground stations, dominated by a high level of pedestrian density. A taxi rank is located on the left."
   },
@@ -215,7 +215,7 @@
     "name": "Waypoint 22",
     "latitude": 51.527664,
     "longitude": -0.133354,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right. Then In 100 metres, take the stairs",
     "contextualPrompt": "Turn right to head east, then in 100 metres, take the descending stairs to exit. You are passing the station entrances and commerce"
   },
@@ -225,7 +225,7 @@
     "name": "Waypoint 23",
     "latitude": 51.528195,
     "longitude": -0.132217,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Take the stairs",
     "contextualPrompt": "Take the descending stairs to Eversholt Street"
   },
@@ -235,7 +235,7 @@
     "name": "Waypoint 24",
     "latitude": 51.528262,
     "longitude": -0.131922,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right onto Eversholt Street then continue straight for 120 metres",
     "contextualPrompt": "Turn right onto Eversholt Street, then continue south for 50 metres"
   },
@@ -245,7 +245,7 @@
     "name": "Waypoint 25",
     "latitude": 51.527896,
     "longitude": -0.131546,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Cross Euston Square then continue straight for 50 metres",
     "contextualPrompt": "Cross the bus loop on your right via the signalled crossing, then continue south for 50 metres."
   },
@@ -255,7 +255,7 @@
     "name": "Waypoint 26",
     "latitude": 51.527381,
     "longitude": -0.13101,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Cross Euston Road ahead, then turn left to cross Upper Woburn Place",
     "contextualPrompt": "Cross Euston Road ahead, then turn left and cross Upper Woburn Place. Both crossings are controlled staggered crossings"
   },
@@ -265,7 +265,7 @@
     "name": "Waypoint 27",
     "latitude": 51.527242,
     "longitude": -0.130508,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right and continue on Upper Woburn Place for 60 metres, where the destination is on your left. Central House.",
     "contextualPrompt": "Turn right and continue onto Upper Woburn Place for 60 metres, where the destination is on your left. St Pancras New Church is located on your left. The church is a prominent historic landmark in this part of Bloomsbury."
   },
@@ -275,7 +275,7 @@
     "name": "Waypoint 28",
     "latitude": 51.526798,
     "longitude": -0.130066,
-    "triggerRadius": 8,
+    "triggerRadius": 5,
     "navigationPrompt": "Arrived",
     "contextualPrompt": "The destination is on your left. Central House. Enter via the ascending steps and locate the large circular entrance button on your right. Arrived"
   }

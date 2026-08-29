@@ -572,4 +572,49 @@ final class SessionLoggerTests: XCTestCase {
             XCTAssertEqual(column("trigger_source", in: row), "")
         }
     }
+
+    // MARK: - Closest approach
+
+    /// The diagnostic for a missed geofence: how near the participant actually
+    /// got. Compared with the waypoint's radius it separates "never got close
+    /// enough" from "was well inside and CoreLocation missed it".
+    func testClosestApproachIsRecordedOnManualRows() {
+        let logger = makeLogger()
+        logger.append(
+            type: .waypointTrigger,
+            waypoint: makeWaypoint(),
+            triggerSource: .manual,
+            closestApproachMetres: 23.7
+        )
+
+        let row = parse(logger.csvText).last!
+        XCTAssertEqual(column("closest_approach_m", in: row), "23.7")
+        XCTAssertEqual(column("trigger_source", in: row), "manual")
+    }
+
+    /// A geofence row's closest approach is inside the radius by definition,
+    /// so the column stays empty rather than restating the obvious.
+    func testGeofenceRowsCarryNoClosestApproach() {
+        let logger = makeLogger()
+        logger.append(type: .waypointTrigger, waypoint: makeWaypoint(), triggerSource: .geofence)
+        XCTAssertEqual(column("closest_approach_m", in: parse(logger.csvText).last!), "")
+    }
+
+    /// Never leaves a stale distance from a previous waypoint behind — an
+    /// unknown approach must read as unknown, not as someone else's number.
+    func testUnknownClosestApproachIsBlankNotZero() {
+        let logger = makeLogger()
+        logger.append(
+            type: .waypointTrigger, waypoint: makeWaypoint(),
+            triggerSource: .manual, closestApproachMetres: nil
+        )
+        let value = column("closest_approach_m", in: parse(logger.csvText).last!)
+        XCTAssertEqual(value, "", "blank, not \"0.0\" — zero would read as standing on the waypoint")
+    }
+
+    func testFlagRowsCarryNoClosestApproach() {
+        let logger = makeLogger()
+        logger.append(type: .flag)
+        XCTAssertEqual(column("closest_approach_m", in: parse(logger.csvText).last!), "")
+    }
 }

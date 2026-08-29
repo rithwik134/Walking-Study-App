@@ -107,6 +107,17 @@ final class WalkSession: NSObject, ObservableObject {
     /// the participant is currently hearing.
     private var speakingQueue: [String] = []
 
+    /// Smallest distance to the armed waypoint seen since it was armed, in
+    /// metres. Reset every time a new waypoint is armed.
+    ///
+    /// Only fixes accurate enough to be believable contribute: a reading with
+    /// ±100m accuracy that happens to land near the waypoint would otherwise
+    /// record a closest approach the participant never actually made, which is
+    /// worse than recording nothing.
+    private var closestApproachToArmed: CLLocationDistance?
+    /// Worst horizontal accuracy a fix may have and still count.
+    private let closestApproachAccuracyLimit: CLLocationAccuracy = 50
+
     private var lastFlagEventID: UUID?
 
     private let locationManager = CLLocationManager()
@@ -196,6 +207,7 @@ final class WalkSession: NSObject, ObservableObject {
         banner = nil
         speakingQueue.removeAll()
         routeIsComplete = false
+        closestApproachToArmed = nil
         cancelConfirmation()
         isActive = true
 
@@ -301,6 +313,7 @@ final class WalkSession: NSObject, ObservableObject {
         // A new waypoint has not been arrived at yet, whatever was true of the
         // last one.
         isInsideCurrentRadius = false
+        closestApproachToArmed = nil
 
         if let currentRegion {
             locationManager.stopMonitoring(for: currentRegion)
@@ -540,6 +553,7 @@ final class WalkSession: NSObject, ObservableObject {
             regionEntryTime: arrivedAt,
             waypoint: waypoint,
             triggerSource: source,
+            closestApproachMetres: source == .manual ? closestApproachToArmed : nil,
             latitude: currentLatitude,
             longitude: currentLongitude,
             horizontalAccuracy: currentAccuracy
@@ -618,6 +632,13 @@ extension WalkSession: CLLocationManagerDelegate {
             self.currentLatitude = location.coordinate.latitude
             self.currentLongitude = location.coordinate.longitude
             self.currentAccuracy = location.horizontalAccuracy
+            // The live readouts above describe "now", so they use the most
+            // recent fix. Closest approach is a minimum over the whole
+            // approach, so it must consider *every* fix in the batch: iOS
+            // coalesces updates — routinely so while the screen is locked,
+            // which is the normal state during a walk — and the nearest fix is
+            // frequently an intermediate one that `locations.last` discards.
+            self.recordClosestApproach(from: locations)
             // Fixes are arriving again, so whatever failed has recovered.
             self.locationError = nil
 
@@ -636,7 +657,16 @@ extension WalkSession: CLLocationManagerDelegate {
             }
             let target = self.walkQueue[self.currentIndex]
             let targetLocation = CLLocation(latitude: target.latitude, longitude: target.longitude)
-            self.distanceToNext = location.distance(from: targetLocation)
+            let distance = location.distance(from: targetLocation)
+            self.distanceToNext = distance
+
+            // Ignore fixes too vague to draw a conclusion from.
+            guard location.horizontalAccuracy > 0,
+                  location.horizontalAccuracy <= self.closestApproachAccuracyLimit
+            else { return }
+            if distance < (self.closestApproachToArmed ?? .greatestFiniteMagnitude) {
+                self.closestApproachToArmed = distance
+            }
         }
     }
 

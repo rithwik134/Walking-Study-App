@@ -84,8 +84,8 @@ raises, and the session end.
 
 Columns: `session_id, participant_id, walk, information_level, session_mode,
 event_index, event_type, time_iso, time_local, elapsed_s, region_entry_local,
-waypoint_order, waypoint_id, waypoint_name, trigger_source, latitude,
-longitude, gps_accuracy_m, note`.
+waypoint_order, waypoint_id, waypoint_name, trigger_source,
+closest_approach_m, latitude, longitude, gps_accuracy_m, note`.
 
 Two timing details worth knowing:
 
@@ -109,6 +109,31 @@ Those rows carry `trigger_source = manual`; ones the participant's own arrival
 produced carry `geofence`. **This distinction matters for analysis** — a forced
 prompt is not evidence the participant was at that waypoint, and may mean they
 were nowhere near it. Filter or annotate accordingly.
+
+### Why a geofence did not fire: `closest_approach_m`
+
+Manually triggered rows also record **the closest the participant actually got
+to that waypoint while it was armed**, in metres. Compare it with the
+waypoint's `triggerRadius` in the route JSON:
+
+| Reading | What it means | What to do |
+|---|---|---|
+| Much larger than the radius | They never came close enough — a route or wayfinding problem, not a technical one | Check whether they went off-route |
+| At or inside the radius | They *were* there and CoreLocation missed it | Raise the radius |
+| Blank | No fix accurate enough to judge | Treat as unknown, not as zero |
+
+Only fixes with a horizontal accuracy of 50 m or better contribute, so a vague
+reading that happens to land near the waypoint cannot invent an approach the
+participant never made. Geofence rows leave the column empty — their closest
+approach is inside the radius by definition.
+
+**Read these numbers against the *effective* radius, not the configured one.**
+iOS clamps small geofences upward: in simulator testing a waypoint configured
+at 15 m fired when the participant was still **32.8 m** away, roughly double.
+So a manual row reading, say, 25 m against a 15 m radius does not mean they
+were too far — it means the fence should have fired and did not. Genuinely
+"never got close enough" looks more like the 90 m in that same test, where no
+fence fired and none should have.
 
 The file is rewritten from scratch after every single event, so if the app
 crashes or iOS terminates it mid-walk, everything up to that moment is

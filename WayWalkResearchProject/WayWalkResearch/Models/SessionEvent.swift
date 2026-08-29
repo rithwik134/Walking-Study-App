@@ -51,6 +51,16 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     /// the researcher did.
     let triggerSource: TriggerSource?
 
+    /// Manually triggered rows only: the closest the participant got to this
+    /// waypoint, in metres, while it was armed.
+    ///
+    /// This is the diagnostic for *why* a geofence did not fire. Compared with
+    /// the waypoint's `triggerRadius` it separates "they never got close
+    /// enough" from "they were well inside and CoreLocation missed it" — two
+    /// problems with completely different fixes. Left empty for geofence rows,
+    /// where the closest approach is inside the radius by definition.
+    let closestApproachMetres: Double?
+
     let latitude: Double?
     let longitude: Double?
     let horizontalAccuracy: Double?
@@ -68,6 +78,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         waypointName: String? = nil,
         waypointOrder: Int? = nil,
         triggerSource: TriggerSource? = nil,
+        closestApproachMetres: Double? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
         horizontalAccuracy: Double? = nil,
@@ -82,6 +93,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         self.waypointName = waypointName
         self.waypointOrder = waypointOrder
         self.triggerSource = triggerSource
+        self.closestApproachMetres = closestApproachMetres
         self.latitude = latitude
         self.longitude = longitude
         self.horizontalAccuracy = horizontalAccuracy

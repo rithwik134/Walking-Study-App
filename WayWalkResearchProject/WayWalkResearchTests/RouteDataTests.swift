@@ -213,16 +213,17 @@ final class RouteDataTests: XCTestCase {
         }
     }
 
-    /// Trigger radii must stay well clear of the GPS noise floor. iOS region
-    /// monitoring is not precise at small radii, and the previous route data
-    /// used 5m, which is below what CoreLocation can resolve.
-    func testAllTriggerRadiiAreAboveTheGPSNoiseFloor() throws {
-        for wp in try allWaypoints() {
-            XCTAssertGreaterThanOrEqual(
-                wp.triggerRadius, 8,
-                "\(wp.id) radius \(wp.triggerRadius)m is too small to trigger reliably"
-            )
-        }
+    /// Both routes are currently set to a uniform 5 m for radius calibration:
+    /// the radius is deliberately smaller than anything that will trigger
+    /// reliably, so prompts have to be cued manually and every waypoint row
+    /// records a `closest_approach_m` to size the real radius from.
+    ///
+    /// Pinned as a single shared value so a partial edit — some waypoints
+    /// changed, some missed — fails here rather than quietly skewing the
+    /// calibration.
+    func testAllTriggerRadiiShareTheCalibrationValue() throws {
+        let radii = Set(try allWaypoints().map(\.triggerRadius))
+        XCTAssertEqual(radii, [5], "expected a uniform 5m calibration radius, found \(radii.sorted())")
     }
 
     // MARK: - Information level model
