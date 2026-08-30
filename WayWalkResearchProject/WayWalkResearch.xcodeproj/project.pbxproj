@@ -25,12 +25,14 @@
 		BB0200000000000000000004 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000004 /* SessionStore.swift */; };
 		BB0200000000000000000005 /* RoutePathStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000005 /* RoutePathStore.swift */; };
 		BB0200000000000000000006 /* RoutePathBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000006 /* RoutePathBuilder.swift */; };
+		BB0200000000000000000013 /* LocationProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000013 /* LocationProviding.swift */; };
 		BB0200000000000000000007 /* WaypointPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000007 /* WaypointPreviewCard.swift */; };
 		BB0200000000000000000008 /* WaypointMapContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000008 /* WaypointMapContent.swift */; };
 		BB0200000000000000000009 /* RoutePathGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000009 /* RoutePathGeneratorView.swift */; };
 		BB020000000000000000000A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000A /* SessionsView.swift */; };
 		BB020000000000000000000B /* SessionLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000B /* SessionLoggerTests.swift */; };
 		BB020000000000000000000C /* RoutePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000C /* RoutePathTests.swift */; };
+		BB0200000000000000000012 /* ClosestApproachTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000012 /* ClosestApproachTests.swift */; };
 		BB0200000000000000000010 /* AudioPromptPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000010 /* AudioPromptPlayerTests.swift */; };
 		BB020000000000000000000F /* ManualWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000F /* ManualWalkView.swift */; };
 		BB0200000000000000000011 /* WalkStatusBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000011 /* WalkStatusBanner.swift */; };
@@ -75,12 +77,14 @@
 		BB0100000000000000000004 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		BB0100000000000000000005 /* RoutePathStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathStore.swift; sourceTree = "<group>"; };
 		BB0100000000000000000006 /* RoutePathBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathBuilder.swift; sourceTree = "<group>"; };
+		BB0100000000000000000013 /* LocationProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationProviding.swift; sourceTree = "<group>"; };
 		BB0100000000000000000007 /* WaypointPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointPreviewCard.swift; sourceTree = "<group>"; };
 		BB0100000000000000000008 /* WaypointMapContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointMapContent.swift; sourceTree = "<group>"; };
 		BB0100000000000000000009 /* RoutePathGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathGeneratorView.swift; sourceTree = "<group>"; };
 		BB010000000000000000000A /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		BB010000000000000000000B /* SessionLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLoggerTests.swift; sourceTree = "<group>"; };
 		BB010000000000000000000C /* RoutePathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathTests.swift; sourceTree = "<group>"; };
+		BB0100000000000000000012 /* ClosestApproachTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClosestApproachTests.swift; sourceTree = "<group>"; };
 		BB0100000000000000000010 /* AudioPromptPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPromptPlayerTests.swift; sourceTree = "<group>"; };
 		BB010000000000000000000F /* ManualWalkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualWalkView.swift; sourceTree = "<group>"; };
 		BB0100000000000000000011 /* WalkStatusBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkStatusBanner.swift; sourceTree = "<group>"; };
@@ -130,6 +134,7 @@
 			isa = PBXGroup;
 			children = (
 				66F5431F9C9F4734B5024000 /* WalkSession.swift */,
+				BB0100000000000000000013 /* LocationProviding.swift */,
 			);
 			path = Location;
 			sourceTree = "<group>";
@@ -175,6 +180,7 @@
 				AABB03223344556677889902 /* RouteDataTests.swift */,
 				BB010000000000000000000B /* SessionLoggerTests.swift */,
 				BB010000000000000000000C /* RoutePathTests.swift */,
+				BB0100000000000000000012 /* ClosestApproachTests.swift */,
 				BB0100000000000000000010 /* AudioPromptPlayerTests.swift */,
 			);
 			path = WayWalkResearchTests;
@@ -346,6 +352,7 @@
 				1421D6C24DDF46B2A8950F51 /* SpeechPromptPlayer.swift in Sources */,
 				E2F3C0CA47A64E4B94686FCC /* RecordedAudioPromptPlayer.swift in Sources */,
 				A3CA67DF8F1D431CA432C72C /* WalkSession.swift in Sources */,
+				BB0200000000000000000013 /* LocationProviding.swift in Sources */,
 				1A2AE7453714412D85928118 /* HomeView.swift in Sources */,
 				F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */,
 				08A6AAAC58A64BD78D60D6B5 /* RouteMapView.swift in Sources */,
@@ -372,6 +379,7 @@
 				AABB04223344556677889903 /* RouteDataTests.swift in Sources */,
 				BB020000000000000000000B /* SessionLoggerTests.swift in Sources */,
 				BB020000000000000000000C /* RoutePathTests.swift in Sources */,
+				BB0200000000000000000012 /* ClosestApproachTests.swift in Sources */,
 				BB0200000000000000000010 /* AudioPromptPlayerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

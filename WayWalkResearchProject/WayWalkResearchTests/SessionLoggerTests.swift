@@ -236,7 +236,6 @@ final class SessionLoggerTests: XCTestCase {
         logger.append(
             type: .waypointTrigger,
             timestamp: fired,
-            regionEntryTime: fired.addingTimeInterval(-2),
             waypoint: waypoint,
             latitude: 51.523566,
             longitude: -0.130377,
@@ -251,39 +250,6 @@ final class SessionLoggerTests: XCTestCase {
         XCTAssertEqual(column("latitude", in: row), "51.523566")
         XCTAssertEqual(column("longitude", in: row), "-0.130377")
         XCTAssertEqual(column("gps_accuracy_m", in: row), "8.5")
-    }
-
-    /// A waypoint time is ambiguous unless the record says whether it means
-    /// "arrived" or "prompt started". Both are written; the gap is the dwell.
-    func testRegionEntryIsTwoSecondsBeforeTriggerAndOnlyOnWaypointRows() {
-        let start = Date(timeIntervalSince1970: 1_700_000_000)
-        let logger = makeLogger(startedAt: start)
-        let fired = start.addingTimeInterval(300)
-
-        logger.append(
-            type: .waypointTrigger,
-            timestamp: fired,
-            regionEntryTime: fired.addingTimeInterval(-2),
-            waypoint: makeWaypoint()
-        )
-        logger.append(type: .flag, timestamp: start.addingTimeInterval(310))
-
-        let rows = parse(logger.csvText)
-        let waypointRow = rows[2]
-        let flagRow = rows[3]
-
-        let entry = column("region_entry_local", in: waypointRow)
-        let local = column("time_local", in: waypointRow)
-        XCTAssertFalse(entry.isEmpty)
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        let entryDate = try! XCTUnwrap(formatter.date(from: entry))
-        let localDate = try! XCTUnwrap(formatter.date(from: local))
-        XCTAssertEqual(localDate.timeIntervalSince(entryDate), 2, accuracy: 0.001)
-
-        XCTAssertEqual(column("region_entry_local", in: flagRow), "")
     }
 
     func testLocalTimeIsWallClockFormat() {
@@ -502,33 +468,6 @@ final class SessionLoggerTests: XCTestCase {
         XCTAssertNotNil(session.recordedAt)
     }
 
-    /// In manual mode the two timestamps mean different things: arrival is when
-    /// CoreLocation reported the radius, and the event time is when the
-    /// researcher actually cued the prompt. The gap between them is the thing
-    /// the mode exists to measure, so both must survive into the CSV.
-    func testManualRowKeepsArrivalAndPlayTimesSeparate() {
-        let start = Date(timeIntervalSince1970: 1_700_000_000)
-        let logger = makeLogger(mode: .manual, startedAt: start)
-        let arrived = start.addingTimeInterval(60)
-        let played = start.addingTimeInterval(75)
-
-        logger.append(
-            type: .waypointTrigger,
-            timestamp: played,
-            regionEntryTime: arrived,
-            waypoint: makeWaypoint()
-        )
-
-        let row = parse(logger.csvText).last!
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        let entry = try! XCTUnwrap(formatter.date(from: column("region_entry_local", in: row)))
-        let local = try! XCTUnwrap(formatter.date(from: column("time_local", in: row)))
-        XCTAssertEqual(local.timeIntervalSince(entry), 15, accuracy: 0.001)
-        XCTAssertEqual(column("elapsed_s", in: row), "75.0")
-    }
-
     func testEveryModeMarkerIsDistinctAndStudyHasNone() {
         XCTAssertNil(SessionMode.study.fileNameMarker)
         XCTAssertEqual(SessionMode.test.fileNameMarker, "TEST")
@@ -548,7 +487,7 @@ final class SessionLoggerTests: XCTestCase {
 
         logger.append(
             type: .waypointTrigger, timestamp: start.addingTimeInterval(60),
-            waypoint: makeWaypoint(id: "a1"), triggerSource: .geofence
+            waypoint: makeWaypoint(id: "a1"), triggerSource: .automatic
         )
         logger.append(
             type: .waypointTrigger, timestamp: start.addingTimeInterval(120),
@@ -556,7 +495,7 @@ final class SessionLoggerTests: XCTestCase {
         )
 
         let rows = parse(logger.csvText)
-        XCTAssertEqual(column("trigger_source", in: rows[2]), "geofence")
+        XCTAssertEqual(column("trigger_source", in: rows[2]), "automatic")
         XCTAssertEqual(column("trigger_source", in: rows[3]), "manual")
     }
 
@@ -592,12 +531,24 @@ final class SessionLoggerTests: XCTestCase {
         XCTAssertEqual(column("trigger_source", in: row), "manual")
     }
 
-    /// A geofence row's closest approach is inside the radius by definition,
-    /// so the column stays empty rather than restating the obvious.
-    func testGeofenceRowsCarryNoClosestApproach() {
+    /// Automatic rows carry it too: there it is the distance at which iOS
+    /// actually fired the fence, which is what reveals the gap between the
+    /// configured radius and the effective one.
+    func testAutomaticRowsAlsoCarryClosestApproach() {
         let logger = makeLogger()
-        logger.append(type: .waypointTrigger, waypoint: makeWaypoint(), triggerSource: .geofence)
-        XCTAssertEqual(column("closest_approach_m", in: parse(logger.csvText).last!), "")
+        logger.append(
+            type: .waypointTrigger, waypoint: makeWaypoint(),
+            triggerSource: .automatic, closestApproachMetres: 31.4
+        )
+        let row = parse(logger.csvText).last!
+        XCTAssertEqual(column("trigger_source", in: row), "automatic")
+        XCTAssertEqual(column("closest_approach_m", in: row), "31.4")
+    }
+
+    /// The removed `region_entry_local` column must not come back by accident.
+    func testRegionEntryColumnIsGone() {
+        XCTAssertFalse(SessionLogger.columns.contains("region_entry_local"))
+        XCTAssertEqual(parse(makeLogger().csvText).first, SessionLogger.columns)
     }
 
     /// Never leaves a stale distance from a previous waypoint behind — an

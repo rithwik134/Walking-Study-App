@@ -19,7 +19,7 @@ enum SessionEventType: String, Codable {
 /// keeps a rescued walk analysable instead of quietly contaminated.
 enum TriggerSource: String, Codable {
     /// Fired by CoreLocation reporting arrival, after the dwell confirmation.
-    case geofence
+    case automatic
     /// Played by the researcher pressing the cue button.
     case manual
 }
@@ -36,13 +36,6 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     let type: SessionEventType
     let timestamp: Date
 
-    /// When CoreLocation first reported arrival, for `waypointTrigger` only.
-    /// Prompts do not play on entry — arrival must be held for
-    /// `WalkSession.confirmationDwellTime` first — so this is earlier than
-    /// `timestamp` by that dwell. Recording both removes any ambiguity about
-    /// whether a waypoint time means "arrived" or "prompt started".
-    let regionEntryTime: Date?
-
     let waypointID: String?
     let waypointName: String?
     let waypointOrder: Int?
@@ -51,14 +44,17 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     /// the researcher did.
     let triggerSource: TriggerSource?
 
-    /// Manually triggered rows only: the closest the participant got to this
-    /// waypoint, in metres, while it was armed.
+    /// The closest the participant got to this waypoint, in metres, while it
+    /// was armed. Recorded for both trigger sources, and they answer different
+    /// questions:
     ///
-    /// This is the diagnostic for *why* a geofence did not fire. Compared with
-    /// the waypoint's `triggerRadius` it separates "they never got close
-    /// enough" from "they were well inside and CoreLocation missed it" — two
-    /// problems with completely different fixes. Left empty for geofence rows,
-    /// where the closest approach is inside the radius by definition.
+    /// - On an `automatic` row it is, in effect, **the distance at which iOS
+    ///   actually fired the fence** — the measurement that reveals how far the
+    ///   effective radius sits from the configured one.
+    /// - On a `manual` row it is how near they got without the fence firing,
+    ///   which says whether the radius was too small or they were off-route.
+    ///
+    /// Empty only when no fix accurate enough to trust arrived at all.
     let closestApproachMetres: Double?
 
     let latitude: Double?
@@ -73,7 +69,6 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         index: Int,
         type: SessionEventType,
         timestamp: Date,
-        regionEntryTime: Date? = nil,
         waypointID: String? = nil,
         waypointName: String? = nil,
         waypointOrder: Int? = nil,
@@ -88,7 +83,6 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         self.index = index
         self.type = type
         self.timestamp = timestamp
-        self.regionEntryTime = regionEntryTime
         self.waypointID = waypointID
         self.waypointName = waypointName
         self.waypointOrder = waypointOrder

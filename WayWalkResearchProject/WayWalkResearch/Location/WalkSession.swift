@@ -117,10 +117,14 @@ final class WalkSession: NSObject, ObservableObject {
     private var closestApproachToArmed: CLLocationDistance?
     /// Worst horizontal accuracy a fix may have and still count.
     private let closestApproachAccuracyLimit: CLLocationAccuracy = 50
+    /// The most recent fix good enough to measure from, kept so a newly armed
+    /// waypoint starts from the participant's known position rather than from
+    /// nothing.
+    private var lastUsableFix: CLLocation?
 
     private var lastFlagEventID: UUID?
 
-    private let locationManager = CLLocationManager()
+    private let locationManager: LocationProviding
     private let audioPlayer: AudioPromptPlaying
 
     /// The voice prompts will actually be spoken in, for the debug panel.
@@ -141,10 +145,6 @@ final class WalkSession: NSObject, ObservableObject {
     private let confirmationDwellTime: TimeInterval = 2.0
     /// The waypoint ID currently being confirmed, if any.
     private var pendingWaypointID: String?
-    /// When CoreLocation first reported arrival at `pendingWaypointID` —
-    /// logged alongside the prompt time so the record distinguishes "arrived"
-    /// from "prompt started".
-    private var pendingArrivalTime: Date?
     /// The in-flight dwell-timer task, cancelled if the participant leaves
     /// the radius early.
     private var confirmationTask: Task<Void, Never>?
@@ -171,8 +171,12 @@ final class WalkSession: NSObject, ObservableObject {
     // participant was already standing inside when it was armed could never
     // satisfy it — wedging that waypoint and every waypoint after it.
 
-    init(audioPlayer: AudioPromptPlaying = SpeechPromptPlayer()) {
+    init(
+        audioPlayer: AudioPromptPlaying = SpeechPromptPlayer(),
+        locationManager: LocationProviding = CLLocationManager()
+    ) {
         self.audioPlayer = audioPlayer
+        self.locationManager = locationManager
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
@@ -333,6 +337,17 @@ final class WalkSession: NSObject, ObservableObject {
         let waypoint = walkQueue[currentIndex]
         currentWaypointNumber = currentIndex + 1
 
+        // Seed the closest approach with where the participant is *now*.
+        // Without this, a waypoint played before the next fix arrives — which
+        // happens whenever prompts are cued faster than roughly one per
+        // second, and on every waypoint after the first when the location
+        // stream is idle — recorded nothing at all.
+        if let fix = lastUsableFix {
+            closestApproachToArmed = fix.distance(
+                from: CLLocation(latitude: waypoint.latitude, longitude: waypoint.longitude)
+            )
+        }
+
         let region = CLCircularRegion(
             center: waypoint.coordinate,
             radius: waypoint.triggerRadius,
@@ -375,7 +390,6 @@ final class WalkSession: NSObject, ObservableObject {
         // reached it" and "when it was played".
         if sessionMode == .manual {
             isInsideCurrentRadius = true
-            if pendingArrivalTime == nil { pendingArrivalTime = Date() }
             return
         }
 
@@ -411,7 +425,7 @@ final class WalkSession: NSObject, ObservableObject {
         let waypoint = walkQueue[currentIndex]
         guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
 
-        deliverPrompt(for: waypoint, at: Date(), arrivedAt: pendingArrivalTime, source: .manual)
+        deliverPrompt(for: waypoint, at: Date(), source: .manual)
     }
 
     /// Cancels an in-progress dwell confirmation if CoreLocation reports the
@@ -422,10 +436,6 @@ final class WalkSession: NSObject, ObservableObject {
     private func handleExit(regionIdentifier: String) {
         if sessionMode == .manual {
             guard currentRegion?.identifier == regionIdentifier else { return }
-            // The cue button goes grey again, but `pendingArrivalTime` is
-            // deliberately kept: they did arrive, and that first arrival is
-            // what the log should compare the play time against even if they
-            // drifted out and back before pressing.
             isInsideCurrentRadius = false
             return
         }
@@ -436,7 +446,6 @@ final class WalkSession: NSObject, ObservableObject {
     private func beginConfirmation(for waypoint: Waypoint) {
         confirmationTask?.cancel()
         pendingWaypointID = waypoint.id
-        pendingArrivalTime = Date()
         isConfirmingArrival = true
 
         confirmationTask = Task { [weak self] in
@@ -462,7 +471,6 @@ final class WalkSession: NSObject, ObservableObject {
     /// here — leaving `pendingWaypointID` set is what wedged the walk.
     private func clearPendingConfirmation() {
         pendingWaypointID = nil
-        pendingArrivalTime = nil
         isConfirmingArrival = false
     }
 
@@ -523,11 +531,10 @@ final class WalkSession: NSObject, ObservableObject {
 
         let waypoint = walkQueue[currentIndex]
         let firedAt = Date()
-        let arrivalTime = pendingArrivalTime
 
         clearPendingConfirmation()
         confirmationTask = nil
-        deliverPrompt(for: waypoint, at: firedAt, arrivedAt: arrivalTime, source: .geofence)
+        deliverPrompt(for: waypoint, at: firedAt, source: .automatic)
     }
 
     /// Records the waypoint, speaks it, and advances to the next one.
@@ -536,24 +543,18 @@ final class WalkSession: NSObject, ObservableObject {
     /// (`playCurrentWaypoint`) so the two cannot drift apart in what they log
     /// or how they advance — the only difference between the modes should be
     /// *when* this runs, not what it does.
-    ///
-    /// `arrivedAt` is when CoreLocation first reported the participant inside
-    /// the radius. In manual mode that is deliberately not the same as
-    /// `firedAt`: the gap between them is how long the researcher waited
-    /// before cueing, which is the thing this mode exists to capture.
+
     private func deliverPrompt(
         for waypoint: Waypoint,
         at firedAt: Date,
-        arrivedAt: Date?,
         source: TriggerSource
     ) {
         logger?.append(
             type: .waypointTrigger,
             timestamp: firedAt,
-            regionEntryTime: arrivedAt,
             waypoint: waypoint,
             triggerSource: source,
-            closestApproachMetres: source == .manual ? closestApproachToArmed : nil,
+            closestApproachMetres: closestApproachToArmed,
             latitude: currentLatitude,
             longitude: currentLongitude,
             horizontalAccuracy: currentAccuracy
@@ -657,15 +658,30 @@ extension WalkSession: CLLocationManagerDelegate {
             }
             let target = self.walkQueue[self.currentIndex]
             let targetLocation = CLLocation(latitude: target.latitude, longitude: target.longitude)
-            let distance = location.distance(from: targetLocation)
-            self.distanceToNext = distance
+            self.distanceToNext = location.distance(from: targetLocation)
+        }
+    }
 
-            // Ignore fixes too vague to draw a conclusion from.
+    /// Folds a batch of fixes into the running minimum distance to the armed
+    /// waypoint.
+    ///
+    /// Only fixes precise enough to believe are counted: a reading with ±100m
+    /// accuracy that happens to land near the waypoint would record an
+    /// approach the participant never made, and an invented number is worse
+    /// for choosing a radius than no number at all.
+    private func recordClosestApproach(from locations: [CLLocation]) {
+        guard isActive, currentIndex < walkQueue.count else { return }
+        let target = walkQueue[currentIndex]
+        let targetLocation = CLLocation(latitude: target.latitude, longitude: target.longitude)
+
+        for location in locations {
             guard location.horizontalAccuracy > 0,
-                  location.horizontalAccuracy <= self.closestApproachAccuracyLimit
-            else { return }
-            if distance < (self.closestApproachToArmed ?? .greatestFiniteMagnitude) {
-                self.closestApproachToArmed = distance
+                  location.horizontalAccuracy <= closestApproachAccuracyLimit
+            else { continue }
+            lastUsableFix = location
+            let distance = location.distance(from: targetLocation)
+            if distance < (closestApproachToArmed ?? .greatestFiniteMagnitude) {
+                closestApproachToArmed = distance
             }
         }
     }

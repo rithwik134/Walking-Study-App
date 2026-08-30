@@ -35,7 +35,7 @@ final class SessionLogger {
     static let columns = [
         "session_id", "participant_id", "walk", "information_level", "session_mode",
         "event_index", "event_type",
-        "time_iso", "time_local", "elapsed_s", "region_entry_local",
+        "time_iso", "time_local", "elapsed_s",
         "waypoint_order", "waypoint_id", "waypoint_name", "trigger_source",
         "closest_approach_m",
         "latitude", "longitude", "gps_accuracy_m",
@@ -109,7 +109,6 @@ final class SessionLogger {
     func append(
         type: SessionEventType,
         timestamp: Date = Date(),
-        regionEntryTime: Date? = nil,
         waypoint: Waypoint? = nil,
         triggerSource: TriggerSource? = nil,
         closestApproachMetres: Double? = nil,
@@ -122,7 +121,6 @@ final class SessionLogger {
             index: events.count,
             type: type,
             timestamp: timestamp,
-            regionEntryTime: regionEntryTime,
             waypointID: waypoint?.id,
             waypointName: waypoint?.name,
             waypointOrder: waypoint?.order,
@@ -185,7 +183,6 @@ final class SessionLogger {
             isoFormatter.string(from: event.timestamp),
             localTimeFormatter.string(from: event.timestamp),
             String(format: "%.1f", elapsed),
-            event.regionEntryTime.map { localTimeFormatter.string(from: $0) } ?? "",
             event.waypointOrder.map(String.init) ?? "",
             event.waypointID ?? "",
             event.waypointName ?? "",

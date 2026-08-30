@@ -83,20 +83,18 @@ the session start, each waypoint as it fires, each flag the researcher
 raises, and the session end.
 
 Columns: `session_id, participant_id, walk, information_level, session_mode,
-event_index, event_type, time_iso, time_local, elapsed_s, region_entry_local,
-waypoint_order, waypoint_id, waypoint_name, trigger_source,
-closest_approach_m, latitude, longitude, gps_accuracy_m, note`.
+event_index, event_type, time_iso, time_local, elapsed_s, waypoint_order,
+waypoint_id, waypoint_name, trigger_source, closest_approach_m, latitude,
+longitude, gps_accuracy_m, note`.
 
 Two timing details worth knowing:
 
 - **`time_local` is bare `HH:MM:SS`** in the device's timezone, so waypoint
   rows paste directly into the `Zone,In,Out` file the WayWalk Analyser
   expects. `time_iso` carries the full date and UTC offset for the archive.
-- **`region_entry_local` vs `time_local`.** A prompt does not play the
-  instant the geofence is entered — arrival is held for two seconds first.
-  `region_entry_local` is when CoreLocation reported arrival;
-  `time_local` is when the prompt started. Pick whichever matches how you
-  are segmenting the physiological data.
+- **`time_local` is when the prompt started**, which for an automatic trigger
+  is two seconds after CoreLocation reported arrival — the dwell that filters
+  out GPS jitter. Subtract that dwell if you need the arrival instant.
 
 ### Forced prompts are marked
 
@@ -106,15 +104,23 @@ the next waypoint is only armed once the current one fires. Pressing it plays
 the instruction the participant was owed and unblocks the rest of the route.
 
 Those rows carry `trigger_source = manual`; ones the participant's own arrival
-produced carry `geofence`. **This distinction matters for analysis** — a forced
+produced carry `automatic`. **This distinction matters for analysis** — a forced
 prompt is not evidence the participant was at that waypoint, and may mean they
 were nowhere near it. Filter or annotate accordingly.
 
 ### Why a geofence did not fire: `closest_approach_m`
 
-Manually triggered rows also record **the closest the participant actually got
-to that waypoint while it was armed**, in metres. Compare it with the
-waypoint's `triggerRadius` in the route JSON:
+Every waypoint row records **the closest the participant actually got to that
+waypoint while it was armed**, in metres. It answers a different question for
+each trigger source:
+
+- **`automatic`** — the distance at which iOS *actually fired* the fence.
+  Because iOS clamps small radii upward, this is how you measure the gap
+  between the radius you configured and the one you really get.
+- **`manual`** — how near they came without the fence firing at all.
+
+For manual rows, compare it with the waypoint's `triggerRadius` in the route
+JSON:
 
 | Reading | What it means | What to do |
 |---|---|---|
@@ -124,16 +130,27 @@ waypoint's `triggerRadius` in the route JSON:
 
 Only fixes with a horizontal accuracy of 50 m or better contribute, so a vague
 reading that happens to land near the waypoint cannot invent an approach the
-participant never made. Geofence rows leave the column empty — their closest
-approach is inside the radius by definition.
+participant never made. The value is seeded from the participant's position at
+the moment the waypoint was armed, so a prompt cued before the next fix arrives
+still reports a real distance instead of nothing.
 
 **Read these numbers against the *effective* radius, not the configured one.**
-iOS clamps small geofences upward: in simulator testing a waypoint configured
-at 15 m fired when the participant was still **32.8 m** away, roughly double.
-So a manual row reading, say, 25 m against a 15 m radius does not mean they
-were too far — it means the fence should have fired and did not. Genuinely
-"never got close enough" looks more like the 90 m in that same test, where no
-fence fired and none should have.
+iOS clamps small geofences upward. Measured in the simulator so far:
+
+| Configured | Fired at |
+|---|---|
+| 15 m | 32.8 m |
+| 5 m | 24.7 m, 28.0 m |
+
+Not proportional — shrinking the configured radius from 15 m to 5 m barely
+moved the trigger distance, which points to a floor somewhere around 25-33 m
+rather than a multiplier. If that holds on real hardware, configuring below
+roughly 15 m buys nothing, and waypoints closer together than about twice the
+floor will always chain-fire.
+
+**These are simulator figures.** Region monitoring is modelled differently
+there, so repeat the calibration on the actual iPhone before drawing radii
+from it.
 
 The file is rewritten from scratch after every single event, so if the app
 crashes or iOS terminates it mid-walk, everything up to that moment is
@@ -194,14 +211,11 @@ progresses at the researcher's pace rather than the geofence's. Pressing again
 before the previous prompt has finished **queues** the new one rather than
 cutting it off.
 
-For analysis, a manual row uses the two time columns to mean different things:
-
-- `region_entry_local` — when CoreLocation reported arrival at the radius
-  (empty if the prompt was played before arriving)
-- `time_local` — when the button was actually pressed
-
-**The gap between them is how long the researcher waited before cueing**, which
-is the measurement this mode exists to produce.
+Manual rows record `time_local` (when the button was pressed) and
+`closest_approach_m` (the nearest the participant got to that waypoint). The
+arrival instant is no longer recorded separately, so the wait between reaching
+a waypoint and being cued is not measurable from the log — reinstate a
+`region_entry_local` column if that gap matters.
 
 ## Routed map lines
 
