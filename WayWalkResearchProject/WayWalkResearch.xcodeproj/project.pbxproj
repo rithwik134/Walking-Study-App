@@ -25,24 +25,25 @@
 		BB0200000000000000000004 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000004 /* SessionStore.swift */; };
 		BB0200000000000000000005 /* RoutePathStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000005 /* RoutePathStore.swift */; };
 		BB0200000000000000000006 /* RoutePathBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000006 /* RoutePathBuilder.swift */; };
-		BB0200000000000000000013 /* LocationProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000013 /* LocationProviding.swift */; };
 		BB0200000000000000000007 /* WaypointPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000007 /* WaypointPreviewCard.swift */; };
 		BB0200000000000000000008 /* WaypointMapContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000008 /* WaypointMapContent.swift */; };
 		BB0200000000000000000009 /* RoutePathGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000009 /* RoutePathGeneratorView.swift */; };
 		BB020000000000000000000A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000A /* SessionsView.swift */; };
 		BB020000000000000000000B /* SessionLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000B /* SessionLoggerTests.swift */; };
 		BB020000000000000000000C /* RoutePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000C /* RoutePathTests.swift */; };
-		BB0200000000000000000012 /* ClosestApproachTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000012 /* ClosestApproachTests.swift */; };
-		BB0200000000000000000010 /* AudioPromptPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000010 /* AudioPromptPlayerTests.swift */; };
-		BB020000000000000000000F /* ManualWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000F /* ManualWalkView.swift */; };
-		BB0200000000000000000011 /* WalkStatusBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000011 /* WalkStatusBanner.swift */; };
 		BB020000000000000000000D /* walkA_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000D /* walkA_path.json */; };
 		BB020000000000000000000E /* walkB_path.json in Resources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000E /* walkB_path.json */; };
+		BB020000000000000000000F /* ManualWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB010000000000000000000F /* ManualWalkView.swift */; };
+		BB0200000000000000000010 /* AudioPromptPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000010 /* AudioPromptPlayerTests.swift */; };
+		BB0200000000000000000011 /* WalkStatusBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000011 /* WalkStatusBanner.swift */; };
+		BB0200000000000000000012 /* ClosestApproachTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000012 /* ClosestApproachTests.swift */; };
+		BB0200000000000000000013 /* LocationProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0100000000000000000013 /* LocationProviding.swift */; };
 		CA1AB99A2A5A4D0C818B3450 /* RouteDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2856C5F4C94D32B071C881 /* RouteDataStore.swift */; };
 		E1216741642A4EF5BBE999CA /* walkB.json in Resources */ = {isa = PBXBuildFile; fileRef = A6F7D1C48AEB4EEE8051CEBF /* walkB.json */; };
 		E263562B9EAE4ACEBA4FF770 /* WaypointTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75DF2887B7C408690FF61EE /* WaypointTestView.swift */; };
 		E2F3C0CA47A64E4B94686FCC /* RecordedAudioPromptPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */; };
 		F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */; };
+		CC0100000000000000000001 /* RecordedWaypointAudio in Resources */ = {isa = PBXBuildFile; fileRef = CC0200000000000000000001 /* RecordedWaypointAudio */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,24 +78,25 @@
 		BB0100000000000000000004 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		BB0100000000000000000005 /* RoutePathStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathStore.swift; sourceTree = "<group>"; };
 		BB0100000000000000000006 /* RoutePathBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathBuilder.swift; sourceTree = "<group>"; };
-		BB0100000000000000000013 /* LocationProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationProviding.swift; sourceTree = "<group>"; };
 		BB0100000000000000000007 /* WaypointPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointPreviewCard.swift; sourceTree = "<group>"; };
 		BB0100000000000000000008 /* WaypointMapContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointMapContent.swift; sourceTree = "<group>"; };
 		BB0100000000000000000009 /* RoutePathGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathGeneratorView.swift; sourceTree = "<group>"; };
 		BB010000000000000000000A /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		BB010000000000000000000B /* SessionLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLoggerTests.swift; sourceTree = "<group>"; };
 		BB010000000000000000000C /* RoutePathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePathTests.swift; sourceTree = "<group>"; };
-		BB0100000000000000000012 /* ClosestApproachTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClosestApproachTests.swift; sourceTree = "<group>"; };
-		BB0100000000000000000010 /* AudioPromptPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPromptPlayerTests.swift; sourceTree = "<group>"; };
-		BB010000000000000000000F /* ManualWalkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualWalkView.swift; sourceTree = "<group>"; };
-		BB0100000000000000000011 /* WalkStatusBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkStatusBanner.swift; sourceTree = "<group>"; };
 		BB010000000000000000000D /* walkA_path.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkA_path.json; sourceTree = "<group>"; };
 		BB010000000000000000000E /* walkB_path.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = walkB_path.json; sourceTree = "<group>"; };
+		BB010000000000000000000F /* ManualWalkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualWalkView.swift; sourceTree = "<group>"; };
+		BB0100000000000000000010 /* AudioPromptPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPromptPlayerTests.swift; sourceTree = "<group>"; };
+		BB0100000000000000000011 /* WalkStatusBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkStatusBanner.swift; sourceTree = "<group>"; };
+		BB0100000000000000000012 /* ClosestApproachTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClosestApproachTests.swift; sourceTree = "<group>"; };
+		BB0100000000000000000013 /* LocationProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationProviding.swift; sourceTree = "<group>"; };
 		D168F585940542C2A28CEFAD /* WayWalkResearchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WayWalkResearchApp.swift; sourceTree = "<group>"; };
 		DC0C53FC31FB4DAF90158A9B /* SpeechPromptPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPromptPlayer.swift; sourceTree = "<group>"; };
 		E5384E4CF84A49A7AA85AD10 /* InformationLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InformationLevel.swift; sourceTree = "<group>"; };
 		F6E0BCA344174D17B510C76F /* WayWalkResearch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayWalkResearch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F75DF2887B7C408690FF61EE /* WaypointTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointTestView.swift; sourceTree = "<group>"; };
+		CC0200000000000000000001 /* RecordedWaypointAudio */ = {isa = PBXFileReference; lastKnownFileType = folder; path = RecordedWaypointAudio; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,6 +147,7 @@
 				39A507D8763A453B96FF5FFA /* AudioPromptPlaying.swift */,
 				DC0C53FC31FB4DAF90158A9B /* SpeechPromptPlayer.swift */,
 				80502E6F44F5442788D13739 /* RecordedAudioPromptPlayer.swift */,
+				CC0200000000000000000001 /* RecordedWaypointAudio */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -326,6 +329,7 @@
 				BB020000000000000000000D /* walkA_path.json in Resources */,
 				BB020000000000000000000E /* walkB_path.json in Resources */,
 				332201BF0DEC415FA0C625E8 /* Assets.xcassets in Resources */,
+				CC0100000000000000000001 /* RecordedWaypointAudio in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -442,7 +446,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.cswalk.waywalkresearch;
+				PRODUCT_BUNDLE_IDENTIFIER = com.testwalk.waywalkresearch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -503,7 +507,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.cswalk.waywalkresearch;
+				PRODUCT_BUNDLE_IDENTIFIER = com.testwalk.waywalkresearch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

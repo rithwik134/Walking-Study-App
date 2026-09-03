@@ -75,19 +75,17 @@ final class AudioPromptPlayerTests: XCTestCase {
 
     // MARK: - RecordedAudioPromptPlayer
 
-    /// No recordings are bundled yet, so every key falls through the
-    /// "missing file" path. That path still has to complete each prompt and
-    /// keep draining the queue — one absent recording must not strand
-    /// everything queued behind it.
-    func testMissingRecordingsStillCompleteInOrder() {
+    /// Empty scripts with no recording complete synchronously — a context-only
+    /// waypoint in Navigation Only mode must not stall the queue.
+    func testMissingRecordingsWithEmptyScriptsStillCompleteInOrder() {
         let player = RecordedAudioPromptPlayer()
         var order: [String] = []
 
-        for key in ["a1_nav", "a2_nav", "a3_nav"] {
+        for key in ["missing_1", "missing_2", "missing_3"] {
             player.play(key: key, script: "") { order.append(key) }
         }
 
-        XCTAssertEqual(order, ["a1_nav", "a2_nav", "a3_nav"])
+        XCTAssertEqual(order, ["missing_1", "missing_2", "missing_3"])
     }
 
     func testRecordedPlayerCompletesEvenWithNoCompletionOnSomePrompts() {
@@ -103,17 +101,61 @@ final class AudioPromptPlayerTests: XCTestCase {
     func testStoppingClearsTheRecordedQueue() {
         let player = RecordedAudioPromptPlayer()
         player.stop()
-        // Nothing queued, nothing playing — stop must be safe to call anyway,
-        // since `WalkSession.end()` calls it whether or not a prompt is live.
         var completed = 0
         player.play(key: "missing", script: "") { completed += 1 }
         XCTAssertEqual(completed, 1)
     }
 
-    /// The default on the protocol, so a recorded-audio backend needs no
-    /// voice-reporting code of its own.
-    func testRecordedPlayerReportsNoSynthesisedVoice() {
-        XCTAssertEqual(RecordedAudioPromptPlayer().voiceDescription, "Recorded audio")
+    func testRecordedPlayerReportsVoiceWithFallbackInfo() {
+        let desc = RecordedAudioPromptPlayer().voiceDescription
+        XCTAssertTrue(desc.hasPrefix("Recorded audio (TTS fallback:"),
+                      "expected fallback voice info, got \(desc)")
+    }
+
+    /// A missing recording with a non-empty script falls back to TTS rather
+    /// than skipping silently — the participant must always hear the
+    /// instruction, even if the mp3 was accidentally left out.
+    func testMissingRecordingFallsBackToTTS() {
+        let player = RecordedAudioPromptPlayer()
+        let completed = expectation(description: "TTS fallback completes")
+
+        player.play(key: "nonexistent_key", script: "Test.") {
+            completed.fulfill()
+        }
+
+        wait(for: [completed], timeout: 30)
+    }
+
+    /// Two missing recordings in sequence must both complete via TTS, in order.
+    func testFallbackTTSMaintainsQueueOrder() {
+        let player = RecordedAudioPromptPlayer()
+        let first = expectation(description: "first fallback")
+        let second = expectation(description: "second fallback")
+
+        var order: [String] = []
+        player.play(key: "missing_a", script: "One.") {
+            order.append("a")
+            first.fulfill()
+        }
+        player.play(key: "missing_b", script: "Two.") {
+            order.append("b")
+            second.fulfill()
+        }
+
+        wait(for: [first, second], timeout: 30)
+        XCTAssertEqual(order, ["a", "b"])
+    }
+
+    /// Whitespace-only scripts are treated as empty — no TTS fallback, no
+    /// stalled queue. This is the path a context-only waypoint takes when
+    /// played in Navigation Only mode with no recording present.
+    func testWhitespaceOnlyScriptWithNoRecordingCompletesImmediately() {
+        let player = RecordedAudioPromptPlayer()
+        var completed = false
+
+        player.play(key: "missing", script: "   \n  ") { completed = true }
+
+        XCTAssertTrue(completed, "whitespace-only script must not start TTS")
     }
 }
 

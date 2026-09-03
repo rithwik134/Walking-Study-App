@@ -7,7 +7,7 @@ import SwiftUI
 /// Start button off the screen, so both are segmented controls with the full
 /// name shown underneath as a caption.
 struct HomeView: View {
-    @StateObject private var session = WalkSession()
+    @StateObject private var session = WalkSession(audioPlayer: RecordedAudioPromptPlayer())
     @State private var participantID = ""
     @State private var selectedWalkID: WalkID = .walkA
     @State private var selectedLevel: InformationLevel = .navigationOnly
