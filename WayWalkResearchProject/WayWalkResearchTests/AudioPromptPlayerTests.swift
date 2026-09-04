@@ -286,4 +286,80 @@ final class WalkSessionBannerTests: XCTestCase {
             "the silent waypoint must not raise a banner of its own"
         )
     }
+
+    // MARK: - Now-playing waypoint
+    //
+    // The preview card follows this rather than `currentWaypointNumber`, which
+    // has already advanced to the next armed waypoint by the time the first
+    // syllable is audible. Without it the researcher read waypoint n+1's
+    // script while waypoint n played.
+
+    func testNowPlayingWaypointHoldsOnTheSpokenWaypointWhileTheIndexAdvances() async throws {
+        let (session, walk, player) = try makeSession()
+        XCTAssertNil(session.nowPlayingWaypointID, "nothing is speaking at the start of a walk")
+
+        session.playCurrentWaypoint()
+        XCTAssertEqual(
+            session.nowPlayingWaypointID, walk.waypoints[0].id,
+            "the card must stay on the waypoint being heard"
+        )
+        XCTAssertEqual(
+            session.currentWaypointNumber, 2,
+            "…even though the next waypoint is already armed"
+        )
+
+        player.finishOldest()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertNil(
+            session.nowPlayingWaypointID,
+            "speech ending releases the card to the armed waypoint"
+        )
+    }
+
+    /// Same rule as the banner: the front of the queue, not the latest trigger.
+    func testNowPlayingWaypointTracksTheAudiblePromptNotTheLatestTrigger() async throws {
+        let (session, walk, player) = try makeSession(level: .navigationPlusContext)
+
+        session.playCurrentWaypoint()
+        session.playCurrentWaypoint()
+        XCTAssertEqual(session.nowPlayingWaypointID, walk.waypoints[0].id)
+
+        player.finishOldest() // waypoint 1 ends; waypoint 2 becomes audible
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(session.nowPlayingWaypointID, walk.waypoints[1].id)
+        XCTAssertEqual(
+            session.banner, .playing(waypointName: walk.waypoints[1].name),
+            "the banner and the card must never name different waypoints"
+        )
+
+        player.finishOldest()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertNil(session.nowPlayingWaypointID)
+    }
+
+    /// Nothing is being heard, so there is nothing to hold the card back — it
+    /// should move straight on, exactly as it did before this existed.
+    func testSilentWaypointHasNoNowPlayingWaypoint() async throws {
+        let (session, walk, player) = try makeSession(level: .navigationOnly)
+
+        session.playCurrentWaypoint() // a1: speaks
+        player.finishOldest()
+        try await Task.sleep(for: .milliseconds(100))
+
+        XCTAssertTrue(walk.waypoints[1].navigationPrompt.isEmpty, "a2 should be context-only")
+        session.playCurrentWaypoint() // a2: silent under Navigation Only
+        XCTAssertNil(session.nowPlayingWaypointID)
+        XCTAssertNil(session.banner)
+    }
+
+    /// `stop()` drops the pending completions, so ending has to clear this
+    /// itself or the card would stay pinned to a prompt no one can hear.
+    func testEndingTheWalkClearsTheNowPlayingWaypoint() throws {
+        let (session, _, _) = try makeSession()
+        session.playCurrentWaypoint()
+        XCTAssertNotNil(session.nowPlayingWaypointID)
+
+        session.end()
+        XCTAssertNil(session.nowPlayingWaypointID)
+    }
 }

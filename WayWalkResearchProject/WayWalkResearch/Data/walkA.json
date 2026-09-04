@@ -97,7 +97,7 @@
     "longitude": -0.130677,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right and continue straight for 20 metres to exit Gordon Square, then turn left onto Gordon Square",
-    "contextualPrompt": null
+    "contextualPrompt": ""
   },
   {
     "id": "a11",

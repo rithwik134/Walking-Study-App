@@ -187,7 +187,7 @@
     "longitude": -0.130666,
     "triggerRadius": 10,
     "navigationPrompt": "Turn left, then in 60 metres, exit Gordon Square",
-    "contextualPrompt": null
+    "contextualPrompt": "Turn left, then in 60 metres, exit Gordon Square"
   },
   {
     "id": "b20",

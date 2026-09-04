@@ -83,6 +83,10 @@ struct ManualWalkView: View {
         .animation(.easeInOut(duration: 0.2), value: session.isInsideCurrentRadius)
         .onAppear { selectFollowedWaypoint() }
         .onChange(of: session.currentWaypointNumber) { selectFollowedWaypoint() }
+        // Speech ending is its own sync point: the number does not change when
+        // a prompt finishes, so without this the card would sit on the played
+        // waypoint until the *next* one fired.
+        .onChange(of: session.nowPlayingWaypointID) { selectFollowedWaypoint() }
         .onChange(of: selectedWaypointID) { previous, current in
             if current != nil, current != followedWaypointID, previous != nil {
                 isFollowingWalk = false
@@ -126,7 +130,14 @@ struct ManualWalkView: View {
         }
     }
 
+    /// While a prompt is speaking, the card holds on the waypoint being heard:
+    /// `currentWaypointNumber` has already moved to the next armed waypoint by
+    /// then, so following it alone showed one script while playing another.
     private var followedWaypointID: String? {
+        if let playing = session.nowPlayingWaypointID,
+           walk.waypoints.contains(where: { $0.id == playing }) {
+            return playing
+        }
         guard let index = currentIndex else { return nil }
         return walk.waypoints[index].id
     }

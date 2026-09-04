@@ -131,6 +131,16 @@ final class WalkSession: NSObject, ObservableObject {
     /// Nil for most of a walk — see `WalkBanner`.
     @Published private(set) var banner: WalkBanner?
 
+    /// The waypoint whose prompt is audible *now* — the front of
+    /// `speakingQueue`, i.e. exactly the fact the banner names, as an id the
+    /// walk screens can select on the map. Nil whenever nothing is speaking.
+    ///
+    /// Needed because `currentWaypointNumber` has already advanced to the next
+    /// armed waypoint by the time the first syllable is heard (`deliverPrompt`
+    /// arms N+1 synchronously), so a preview card following it would show the
+    /// participant one script while playing another.
+    @Published private(set) var nowPlayingWaypointID: String?
+
     @Published var lastTriggeredWaypointName: String?
     @Published private(set) var triggeredWaypointIDs: Set<String> = []
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -204,12 +214,20 @@ final class WalkSession: NSObject, ObservableObject {
     /// start arriving again.
     @Published private(set) var locationError: String?
 
-    /// Waypoint names whose prompts are queued or being spoken, in the order
-    /// the synthesiser will speak them. The front is what is audible *now*,
-    /// which is what the banner must show — where waypoints are close enough
-    /// to fire seconds apart, the most recently triggered one is not the one
-    /// the participant is currently hearing.
-    private var speakingQueue: [String] = []
+    /// One queued or speaking prompt. The name is what the banner reads out;
+    /// the id is what the maps select on. Both are carried so the two can
+    /// never describe different waypoints.
+    private struct SpokenPrompt {
+        let waypointID: String
+        let waypointName: String
+    }
+
+    /// Prompts queued or being spoken, in the order the player will speak
+    /// them. The front is what is audible *now*, which is what the banner and
+    /// `nowPlayingWaypointID` must show — where waypoints are close enough to
+    /// fire seconds apart, the most recently triggered one is not the one the
+    /// participant is currently hearing.
+    private var speakingQueue: [SpokenPrompt] = []
 
     /// Smallest distance to the armed waypoint seen since it was armed, in
     /// metres. Reset every time a new waypoint is armed.
@@ -322,6 +340,7 @@ final class WalkSession: NSObject, ObservableObject {
         lastSessionFileURL = nil
         banner = nil
         speakingQueue.removeAll()
+        nowPlayingWaypointID = nil
         routeIsComplete = false
         closestApproachToArmed = nil
         clearConfirmationProgress()
@@ -348,6 +367,9 @@ final class WalkSession: NSObject, ObservableObject {
     func end() {
         isActive = false
         speakingQueue.removeAll()
+        // Explicitly, because `audioPlayer.stop()` below drops the pending
+        // completions that would otherwise have cleared this.
+        nowPlayingWaypointID = nil
         banner = .ended
         isNextWaypointArmed = false
         clearConfirmationProgress()
@@ -758,35 +780,45 @@ final class WalkSession: NSObject, ObservableObject {
         // which would leave the banner stuck.
         guard !script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-        let name = waypoint.name
-        speakingQueue.append(name)
+        let id = waypoint.id
+        speakingQueue.append(SpokenPrompt(waypointID: id, waypointName: waypoint.name))
         // Only take over the banner if nothing is already being spoken —
         // otherwise this prompt is queued behind one the participant is still
         // listening to, and saying so would be wrong.
-        if speakingQueue.count == 1 { banner = .playing(waypointName: name) }
+        if speakingQueue.count == 1 { showFrontOfSpeakingQueue() }
         audioPlayer.play(
             key: waypoint.audioKey(for: informationLevel),
             script: script
         ) { [weak self] in
             // Delegate callbacks are not guaranteed on the main actor.
-            Task { @MainActor in self?.promptDidFinish(waypointName: name) }
+            Task { @MainActor in self?.promptDidFinish(waypointID: id) }
         }
     }
 
     /// Clears the banner when the speech that raised it ends.
     ///
-    /// Guarded on the banner still being *this* prompt's: where waypoints are
-    /// close enough to queue, a later prompt has already replaced the banner
-    /// and the earlier one finishing must not wipe it.
-    private func promptDidFinish(waypointName: String) {
-        if let index = speakingQueue.firstIndex(of: waypointName) {
+    /// Removal is by id, not by position: where waypoints are close enough to
+    /// queue, completions are not guaranteed to be the only thing that emptied
+    /// the queue, and two waypoints can share a name.
+    private func promptDidFinish(waypointID: String) {
+        if let index = speakingQueue.firstIndex(where: { $0.waypointID == waypointID }) {
             speakingQueue.remove(at: index)
         }
-        // Whatever is now at the front is what the participant can hear.
+        showFrontOfSpeakingQueue()
+    }
+
+    /// Points the banner and `nowPlayingWaypointID` at whatever is audible now.
+    ///
+    /// Both describe the same prompt, so they are only ever set together — a
+    /// card left on a waypoint the banner has moved off would be worse than
+    /// the jump this exists to prevent.
+    private func showFrontOfSpeakingQueue() {
         if let nowSpeaking = speakingQueue.first {
-            banner = .playing(waypointName: nowSpeaking)
+            banner = .playing(waypointName: nowSpeaking.waypointName)
+            nowPlayingWaypointID = nowSpeaking.waypointID
         } else {
             banner = routeIsComplete ? .ended : nil
+            nowPlayingWaypointID = nil
         }
     }
 }
