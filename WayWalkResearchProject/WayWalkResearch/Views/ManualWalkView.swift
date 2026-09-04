@@ -198,6 +198,14 @@ struct ManualWalkView: View {
         // Green once inside the radius, grey outside — but still pressable
         // either way, which is the whole point of the mode. `.disabled` is
         // used only when there is genuinely nothing left to play.
+        //
+        // "Inside" now means a location fix put the participant within the
+        // waypoint's `triggerRadius`, not that CoreLocation reported region
+        // entry. It therefore lights much later than it used to — at ~10m
+        // rather than the 25-33m the coarse region reported — and can flicker
+        // at the boundary. That is the honest reading, and it finally matches
+        // the circle the map draws to scale. The distance in `cueHint` below
+        // is the better cue for anticipating a prompt.
         .tint(session.isInsideCurrentRadius ? .green : .gray)
         .disabled(isComplete)
     }

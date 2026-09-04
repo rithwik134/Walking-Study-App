@@ -292,6 +292,86 @@ final class SessionLoggerTests: XCTestCase {
         XCTAssertEqual(column("note", in: rows[2]), awkward)
     }
 
+    // MARK: - Fix age
+
+    /// `fix_age_s` must be a difference of two values *stored on the event*,
+    /// never computed from `Date()` at write time.
+    ///
+    /// The whole file is regenerated after every mutation, so a recomputed age
+    /// would drift on each flush — an already-written row would silently
+    /// change every time a later flag was added or annotated, which is exactly
+    /// the corruption `testAttachNotePatchesOnlyTheTargetRow` guards against.
+    func testFixAgeIsStableAcrossARewrite() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let logger = makeLogger(startedAt: start)
+        let firedAt = start.addingTimeInterval(60)
+
+        logger.append(
+            type: .waypointTrigger,
+            timestamp: firedAt,
+            waypoint: makeWaypoint(),
+            triggerSource: .automatic,
+            latitude: 51.5, longitude: -0.13, horizontalAccuracy: 8,
+            fixTimestamp: firedAt.addingTimeInterval(-12)
+        )
+        let flag = logger.append(type: .flag, timestamp: start.addingTimeInterval(90))
+
+        let before = parse(logger.csvText)
+        XCTAssertEqual(column("fix_age_s", in: before[2]), "12.0")
+
+        // Force a full rewrite of the file.
+        logger.attachNote("something happened later", to: flag)
+        let after = parse(logger.csvText)
+
+        XCTAssertEqual(before[2], after[2], "the waypoint row must be byte-identical after a rewrite")
+        XCTAssertEqual(column("fix_age_s", in: after[2]), "12.0")
+    }
+
+    func testFixColumnsAreBlankWhenNoFixIsKnown() {
+        let logger = makeLogger()
+        logger.append(type: .flag)
+
+        let row = parse(logger.csvText)[2]
+        XCTAssertEqual(column("fix_time_local", in: row), "", "blank, not a fabricated time")
+        XCTAssertEqual(column("fix_age_s", in: row), "", "blank, not 0.0 — unknown is not zero")
+    }
+
+    func testFixTimeIsBareWallClock() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let logger = makeLogger(startedAt: start)
+        logger.append(type: .flag, timestamp: start, fixTimestamp: start)
+
+        let value = column("fix_time_local", in: parse(logger.csvText)[2])
+        XCTAssertEqual(value.count, 8, "expected HH:MM:SS, got \(value)")
+        XCTAssertEqual(value.filter { $0 == ":" }.count, 2)
+    }
+
+    /// The header is joined without escaping while rows are escaped, so a
+    /// column *name* containing a comma or quote would desynchronise the two
+    /// and silently corrupt every downstream parse.
+    func testEveryColumnNameIsCsvSafe() {
+        for name in SessionLogger.columns {
+            XCTAssertFalse(
+                name.contains(where: { $0 == "," || $0 == "\"" || $0 == "\n" || $0 == "\r" }),
+                "column name \"\(name)\" would break the unescaped header join"
+            )
+        }
+    }
+
+    /// Guards the silent-drift failure the by-name column lookup cannot catch:
+    /// a name added to `columns` without a matching field in `row(for:)` makes
+    /// every `column(_:in:)` read return "" instead of failing.
+    func testEveryRowHasAFieldForEveryColumn() {
+        let logger = makeLogger()
+        logger.append(type: .waypointTrigger, waypoint: makeWaypoint(), triggerSource: .manual)
+        logger.finish()
+
+        for row in parse(logger.csvText) {
+            XCTAssertEqual(row.count, SessionLogger.columns.count,
+                           "row has \(row.count) fields but there are \(SessionLogger.columns.count) columns")
+        }
+    }
+
     // MARK: - Notes
 
     func testAttachNotePatchesOnlyTheTargetRow() {

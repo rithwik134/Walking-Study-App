@@ -61,7 +61,23 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     let longitude: Double?
     let horizontalAccuracy: Double?
 
-    /// Optional free text attached to a flag after the fact.
+    /// When the GPS fix that `latitude`/`longitude`/`horizontalAccuracy`
+    /// describe was actually *measured* — not when the app received it.
+    ///
+    /// iOS coalesces location updates while the screen is locked, which is the
+    /// normal state during a walk, so a fix taken at 10:00:00 can be delivered
+    /// at 10:00:20. Without this the row would claim a position for `timestamp`
+    /// that the participant had already left twenty seconds and thirty metres
+    /// earlier, and nothing in the file would say so. The difference between
+    /// the two is written to the CSV as `fix_age_s`.
+    ///
+    /// Nil for rows with no position at all (`sessionStart`, `sessionEnd`).
+    let fixTimestamp: Date?
+
+    /// Optional free text. Two producers: a note the researcher attaches to a
+    /// flag after the fact, and a `backstop: …` marker written at append time
+    /// when a waypoint was fired by a backstop rather than by a confirmed
+    /// arrival (see `WalkSession`).
     var note: String?
 
     init(
@@ -77,6 +93,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         latitude: Double? = nil,
         longitude: Double? = nil,
         horizontalAccuracy: Double? = nil,
+        fixTimestamp: Date? = nil,
         note: String? = nil
     ) {
         self.id = id
@@ -91,6 +108,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         self.latitude = latitude
         self.longitude = longitude
         self.horizontalAccuracy = horizontalAccuracy
+        self.fixTimestamp = fixTimestamp
         self.note = note
     }
 }

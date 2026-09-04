@@ -11,9 +11,22 @@ struct Waypoint: Codable, Identifiable, Equatable {
     let latitude: Double
     let longitude: Double
 
-    /// Geofence radius in metres. Keep this at 20m or above where possible —
-    /// consumer GPS accuracy in an urban street canyon is often ±10-15m, so
-    /// smaller radii can miss triggers or fire late.
+    /// How close, in metres, the participant must be for this waypoint's
+    /// prompt to fire.
+    ///
+    /// **This is not the geofence radius.** The `CLCircularRegion` uses a
+    /// fixed, much coarser `TriggerTuning.wakeRadius` (~100m) whose only job
+    /// is to wake the app; the prompt itself fires when consecutive location
+    /// fixes put the participant within *this* distance. See `WalkSession`
+    /// for why the two were separated.
+    ///
+    /// It is also what the three maps draw to true scale, so keeping it the
+    /// fire threshold is what keeps those circles honest.
+    ///
+    /// Consumer GPS in an urban street canyon is often ±10-15m, so values far
+    /// below that will rarely be satisfied and will fall through to a
+    /// backstop. Values above roughly half the smallest gap between
+    /// consecutive waypoints let one position satisfy two waypoints at once.
     let triggerRadius: Double
 
     /// Condition 1 content — always played.

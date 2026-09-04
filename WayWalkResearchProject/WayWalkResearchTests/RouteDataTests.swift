@@ -213,17 +213,18 @@ final class RouteDataTests: XCTestCase {
         }
     }
 
-    /// Both routes are currently set to a uniform 5 m for radius calibration:
-    /// the radius is deliberately smaller than anything that will trigger
-    /// reliably, so prompts have to be cued manually and every waypoint row
-    /// records a `closest_approach_m` to size the real radius from.
+    /// Both routes are set to a uniform 10 m: the distance at which a prompt
+    /// actually fires, evaluated against the location fix stream rather than a
+    /// geofence (see `WalkSession`). Chosen as the largest value that stays
+    /// below half the smallest gap between consecutive waypoints on either
+    /// route, so one position cannot ordinarily satisfy two waypoints at once,
+    /// while remaining plausible against ±10-15 m urban GPS.
     ///
     /// Pinned as a single shared value so a partial edit — some waypoints
-    /// changed, some missed — fails here rather than quietly skewing the
-    /// calibration.
+    /// changed, some missed — fails here rather than quietly skewing the data.
     func testAllTriggerRadiiShareTheCalibrationValue() throws {
         let radii = Set(try allWaypoints().map(\.triggerRadius))
-        XCTAssertEqual(radii, [5], "expected a uniform 5m calibration radius, found \(radii.sorted())")
+        XCTAssertEqual(radii, [10], "expected a uniform 10m fire radius, found \(radii.sorted())")
     }
 
     // MARK: - Information level model

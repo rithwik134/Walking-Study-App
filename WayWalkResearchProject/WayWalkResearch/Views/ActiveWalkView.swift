@@ -265,7 +265,14 @@ struct ActiveWalkView: View {
             debugRow("Latitude", session.currentLatitude.map { String(format: "%.6f", $0) } ?? "—")
             debugRow("Longitude", session.currentLongitude.map { String(format: "%.6f", $0) } ?? "—")
             debugRow("Next waypoint armed", session.isNextWaypointArmed ? "Yes" : "No")
+            debugRow("Wake region", session.hasEnteredWakeRegion ? "Inside" : "Outside")
+            debugRow("In trigger radius", session.isInsideCurrentRadius ? "Yes" : "No")
             debugRow("Confirming arrival", session.isConfirmingArrival ? "Yes" : "No")
+            // How stale the position above is. iOS batches fixes while locked,
+            // so this is the direct measure of how late an automatic prompt
+            // lands — and, with GPS accuracy, what says whether the trigger's
+            // accuracy limit is achievable on this route.
+            debugRow("Fix age", session.currentFix.map { String(format: "%.0fs", Date().timeIntervalSince($0.timestamp)) } ?? "—")
             debugRow("Triggered", "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)")
             debugRow("Voice", session.audioVoiceDescription)
         }

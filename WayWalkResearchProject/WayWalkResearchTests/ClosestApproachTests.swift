@@ -23,12 +23,45 @@ final class SilentLocationManager: LocationProviding {
     private(set) var monitoredRegions: Set<CLRegion> = []
     var authorizationStatus: CLAuthorizationStatus = .authorizedAlways
 
+    /// Every region `WalkSession` has asked the state of, in order. Lets a
+    /// test assert the arm-time `requestState` still happens — and, crucially,
+    /// that its "inside" reply no longer fires anything.
+    private(set) var requestedStates: [CLRegion] = []
+
+    /// The single armed region. `WalkSession` monitors exactly one at a time.
+    var monitoredRegion: CLRegion? { monitoredRegions.first }
+
     func requestAlwaysAuthorization() {}
     func startUpdatingLocation() {}
     func stopUpdatingLocation() {}
     func startMonitoring(for region: CLRegion) { monitoredRegions.insert(region) }
     func stopMonitoring(for region: CLRegion) { monitoredRegions.remove(region) }
-    func requestState(for region: CLRegion) {}
+
+    /// Records the request but never answers it. Region state is *the* thing
+    /// under test in the two-stage design, so it is delivered explicitly by
+    /// `simulate…` below rather than arriving on its own.
+    func requestState(for region: CLRegion) { requestedStates.append(region) }
+
+    // MARK: - Driving region callbacks
+
+    // `WalkSession` ignores the manager argument on all three, so a throwaway
+    // real one satisfies the signature — the same trick the fix delivery
+    // helper uses.
+
+    func simulateEnter(_ region: CLRegion? = nil) {
+        guard let region = region ?? monitoredRegion else { return }
+        delegate?.locationManager?(CLLocationManager(), didEnterRegion: region)
+    }
+
+    func simulateExit(_ region: CLRegion? = nil) {
+        guard let region = region ?? monitoredRegion else { return }
+        delegate?.locationManager?(CLLocationManager(), didExitRegion: region)
+    }
+
+    func simulateState(_ state: CLRegionState, for region: CLRegion? = nil) {
+        guard let region = region ?? monitoredRegion else { return }
+        delegate?.locationManager?(CLLocationManager(), didDetermineState: state, for: region)
+    }
 }
 
 @MainActor

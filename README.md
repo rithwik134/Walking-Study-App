@@ -113,16 +113,22 @@ raises, and the session end.
 Columns: `session_id, participant_id, walk, information_level, session_mode,
 event_index, event_type, time_iso, time_local, elapsed_s, waypoint_order,
 waypoint_id, waypoint_name, trigger_source, closest_approach_m, latitude,
-longitude, gps_accuracy_m, note`.
+longitude, gps_accuracy_m, fix_time_local, fix_age_s, note`.
 
-Two timing details worth knowing:
+Three timing details worth knowing:
 
 - **`time_local` is bare `HH:MM:SS`** in the device's timezone, so waypoint
   rows paste directly into the `Zone,In,Out` file the WayWalk Analyser
   expects. `time_iso` carries the full date and UTC offset for the archive.
-- **`time_local` is when the prompt started**, which for an automatic trigger
-  is two seconds after CoreLocation reported arrival — the dwell that filters
-  out GPS jitter. Subtract that dwell if you need the arrival instant.
+- **`time_local` is when the prompt started playing** — the moment the app
+  decided, which is also the moment the participant heard it.
+- **`fix_age_s` is how stale the position on that row was**, in seconds: the
+  gap between when the GPS fix was *measured* (`fix_time_local`) and when the
+  event was recorded. iOS batches location updates while the screen is
+  locked — the normal state during a walk — so a row can carry coordinates
+  taken twenty seconds and thirty metres earlier. A large value means the
+  prompt fired late and the logged position is where they *were*, not where
+  they were when it played. Blank means no fix was known at all.
 
 ### Forced prompts are marked
 
@@ -136,24 +142,44 @@ produced carry `automatic`. **This distinction matters for analysis** — a forc
 prompt is not evidence the participant was at that waypoint, and may mean they
 were nowhere near it. Filter or annotate accordingly.
 
-### Why a geofence did not fire: `closest_approach_m`
+### Backstop fires are marked in `note`
+
+A waypoint that never fires blocks the entire rest of the walk, since the next
+one is only armed once the current one fires. So when the app can tell the
+participant has *passed* a waypoint without ever getting close enough to
+trigger it, it fires it anyway rather than let the walk stall. Those rows carry
+`trigger_source = automatic` — the participant's own movement did cause them —
+with a `note` of either:
+
+| `note` | Meaning |
+|---|---|
+| `backstop: wake_exit` | They left the ~100 m monitoring region around the waypoint without ever confirming arrival |
+| `backstop: receded` | They came within 30 m, then travelled 50 m past their closest point, without ever confirming arrival |
+
+**A backstop row is not evidence of arrival**, and typically fires well after
+the waypoint. Two ways to exclude them: filter on `note` starting `backstop:`,
+or — if your analyser ignores `note` — on `closest_approach_m` exceeding the
+waypoint's `triggerRadius`, which is true of every backstop row by definition,
+since a row that got closer than that would have fired normally.
+
+### How close they got: `closest_approach_m`
 
 Every waypoint row records **the closest the participant actually got to that
-waypoint while it was armed**, in metres. It answers a different question for
-each trigger source:
+waypoint while it was armed**, in metres. What it tells you depends on how the
+row fired:
 
-- **`automatic`** — the distance at which iOS *actually fired* the fence.
-  Because iOS clamps small radii upward, this is how you measure the gap
-  between the radius you configured and the one you really get.
-- **`manual`** — how near they came without the fence firing at all.
+- **`automatic`, no note** — a normal fire. Should be at or inside the
+  waypoint's `triggerRadius`; that is what firing means.
+- **`automatic`, `backstop:` note** — how near they came without ever
+  confirming arrival. Always larger than `triggerRadius`.
+- **`manual`** — how near they came at the moment the researcher forced it.
 
-For manual rows, compare it with the waypoint's `triggerRadius` in the route
-JSON:
+Compare it with the waypoint's `triggerRadius` in the route JSON:
 
 | Reading | What it means | What to do |
 |---|---|---|
 | Much larger than the radius | They never came close enough — a route or wayfinding problem, not a technical one | Check whether they went off-route |
-| At or inside the radius | They *were* there and CoreLocation missed it | Raise the radius |
+| At or just outside the radius | They *were* there and no fix was accurate enough to confirm it | Loosen `triggerAccuracyLimit`, or widen the radius |
 | Blank | No fix accurate enough to judge | Treat as unknown, not as zero |
 
 Only fixes with a horizontal accuracy of 50 m or better contribute, so a vague
@@ -162,23 +188,48 @@ participant never made. The value is seeded from the participant's position at
 the moment the waypoint was armed, so a prompt cued before the next fix arrives
 still reports a real distance instead of nothing.
 
-**Read these numbers against the *effective* radius, not the configured one.**
-iOS clamps small geofences upward. Measured in the simulator so far:
+### Why the trigger works the way it does
+
+Prompts used to fire on CoreLocation region entry. They no longer do, because
+iOS clamps small geofences upward and reports "inside" from far away. Measured
+in the simulator here:
 
 | Configured | Fired at |
 |---|---|
 | 15 m | 32.8 m |
 | 5 m | 24.7 m, 28.0 m |
 
-Not proportional — shrinking the configured radius from 15 m to 5 m barely
-moved the trigger distance, which points to a floor somewhere around 25-33 m
-rather than a multiplier. If that holds on real hardware, configuring below
-roughly 15 m buys nothing, and waypoints closer together than about twice the
-floor will always chain-fire.
+Not proportional — shrinking the configured radius barely moved the trigger
+distance, pointing to a floor rather than a multiplier. Real-device figures are
+far worse: Shevchenko & Reips (2023, *Behavior Research Methods* 56:6411)
+walked iPhones past 10 m geofences and saw them fire **75-183 m out**, with no
+difference between 10 m, 50 m and 100 m radii, concluding iOS likely uses ~100 m
+for anything below 100 m.
 
-**These are simulator figures.** Region monitoring is modelled differently
-there, so repeat the calibration on the actual iPhone before drawing radii
-from it.
+With waypoints a median ~50 m apart on these routes, that does not merely fire
+early — it **chain-fires**. Waypoint N fires, N+1 is armed, iOS immediately
+reports the participant already inside N+1's clamped radius, and several
+prompts stack up on someone standing still.
+
+So triggering is now two-stage:
+
+1. **A coarse 100 m region wakes the app.** Entering it plays nothing. Its only
+   job is to guarantee the app is running — region monitoring is what Apple
+   supports for relaunching a suspended app while the phone is locked.
+2. **The prompt fires from the GPS fix stream**, when two consecutive fixes,
+   each accurate to within 25 m, put the participant inside the waypoint's
+   `triggerRadius` (currently 10 m).
+
+`triggerRadius` in the route JSON is therefore **the distance at which a prompt
+fires**, not a geofence radius — and it is what the maps draw to scale. The
+backstops above exist because a waypoint that never fires would otherwise block
+the rest of the walk.
+
+**Both radius figures above are still worth re-measuring on the actual iPhone**
+before a study, using `closest_approach_m`, `gps_accuracy_m` and `fix_age_s`
+from a Test Mode walk. In particular, if `gps_accuracy_m` on the route is
+routinely worse than 25 m, the fine trigger will starve and everything will
+fall through to backstops — raise `TriggerTuning.triggerAccuracyLimit`.
 
 The file is rewritten from scratch after every single event, so if the app
 crashes or iOS terminates it mid-walk, everything up to that moment is
@@ -234,6 +285,13 @@ Judging the right moment is the point of the mode, and a button that refused to
 work until CoreLocation agreed would take that judgement away exactly when it
 is wanted.
 
+Green now means a GPS fix put the participant within the waypoint's
+`triggerRadius` — about 10 m — rather than the much coarser CoreLocation
+region entry it used to track. It therefore lights considerably later, and can
+flicker at the boundary. That is the honest reading, and it matches the circle
+drawn on the map; the **"n m away"** figure under the button is the better cue
+for anticipating a prompt.
+
 Pressing plays the current waypoint and advances to the next one, so the walk
 progresses at the researcher's pace rather than the geofence's. Pressing again
 before the previous prompt has finished **queues** the new one rather than
@@ -241,8 +299,8 @@ cutting it off.
 
 Manual rows record `time_local` (when the button was pressed) and
 `closest_approach_m` (the nearest the participant got to that waypoint). The
-arrival instant is no longer recorded separately, so the wait between reaching
-a waypoint and being cued is not measurable from the log — reinstate a
+arrival instant is not recorded separately, so the wait between reaching a
+waypoint and being cued is not measurable from the log — add a
 `region_entry_local` column if that gap matters.
 
 ## Routed map lines
@@ -272,10 +330,14 @@ does not always include garden paths and internal campus routes.
   one isn't armed until the current one has fired. This is what prevents
   overlapping trigger zones from misfiring — the system-wide 20-region
   limit is no longer a practical concern for this app.
-- **Geofence accuracy**: realistically ±15-20m in good conditions, worse
-  near tall buildings. Keep trigger radii realistic for the environment —
-  radii much smaller than the GPS noise floor (e.g. 5m) risk missed or
-  late triggers even though the sequential logic itself is reliable.
+- **Geofences cannot be used to fire prompts precisely.** iOS clamps small
+  radii upward and reports entry from ~100 m away, so region monitoring is
+  used only to wake the app; the prompt fires from GPS fixes. See "Why the
+  trigger works the way it does" above.
+- **GPS accuracy**: realistically ±15-20m in good conditions, worse near
+  tall buildings. A fire radius far below that will rarely be satisfied and
+  will fall through to a backstop; one above roughly half the smallest gap
+  between consecutive waypoints lets one position satisfy two waypoints.
 - **Locked-phone playback** depends on the Background Modes already baked
   into Info.plist — test explicitly (lock the phone, walk into a trigger
   zone, confirm audio plays) before the real study.
@@ -292,10 +354,15 @@ does not always include garden paths and internal campus routes.
 - **Debug button**, on the researcher screen during a normal walk, reveals
   a small panel with live GPS accuracy, current waypoint number, distance
   to the next waypoint, latitude/longitude, whether the next waypoint is
-  currently armed, whether a dwell confirmation is in progress, how many
-  waypoints have triggered so far, and which voice is actually in use
-  (the recorded audio or, for a waypoint riding the TTS fallback, the
-  synthesiser voice). Hidden by default.
+  armed, whether the participant is inside the coarse wake region and inside
+  the fire radius, whether a confirmation is part-way through, how stale the
+  current fix is, how many waypoints have triggered, and which voice is in
+  use. Hidden by default.
+
+  **Fix age and GPS accuracy are the two readings to watch on a calibration
+  walk.** Accuracy routinely worse than 25 m means the fire trigger is
+  starving and prompts are falling through to backstops; a large fix age
+  means prompts are landing late because iOS is batching updates.
 - **Waypoint Test Mode**, toggled under **Modes** on the Home screen before
   starting a walk, replaces the normal researcher screen with a live map showing every
   waypoint, your current position, which waypoint is armed (orange), and
@@ -308,11 +375,12 @@ does not always include garden paths and internal campus routes.
   spoken. In the two-condition view the opening that the contextual script
   shares with the navigation prompt is dimmed, so the added context stands
   out — the scripts are alternatives, never played back to back.
-- **Trigger radii are drawn to true scale** on all three maps. At the 5m
+- **Trigger radii are drawn to true scale** on all three maps. At the 10m
   radius every waypoint in both routes currently uses, they are sub-pixel
   until you zoom well in. That is deliberate: seeing their real size against
-  the street is the point, and 5m is well below the GPS noise floor (see
-  Known iOS constraints, and `Waypoint.swift`, which advises 20m or more).
+  the street is the point. The circle is the distance at which a prompt
+  fires, so it is honest — the 100 m region CoreLocation actually monitors
+  is not drawn, because it never fires anything.
 
 ## Recorded audio
 

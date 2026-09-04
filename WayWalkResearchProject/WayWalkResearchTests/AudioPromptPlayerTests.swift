@@ -191,7 +191,7 @@ final class WalkSessionBannerTests: XCTestCase {
         level: InformationLevel = .navigationOnly
     ) throws -> (WalkSession, Walk, FakePromptPlayer) {
         let player = FakePromptPlayer()
-        let session = WalkSession(audioPlayer: player)
+        let session = WalkSession(audioPlayer: player, locationManager: SilentLocationManager())
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
         // .test so these runs are marked and never mistaken for study data.
         session.start(walk: walk, informationLevel: level,
@@ -270,7 +270,7 @@ final class WalkSessionBannerTests: XCTestCase {
     /// completion, which would strand the banner.
     func testSilentWaypointRaisesNoBanner() throws {
         let player = FakePromptPlayer()
-        let session = WalkSession(audioPlayer: player)
+        let session = WalkSession(audioPlayer: player, locationManager: SilentLocationManager())
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
         session.start(walk: walk, informationLevel: .navigationOnly,
                       participantID: "BANNERTEST", mode: .test)
