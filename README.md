@@ -11,11 +11,15 @@ manual file-adding required, everything is already wired into the project.
 
 ## Before your first build
 
+A development team (`98SNX6UZ24`) and bundle identifier
+(`com.testwalk.waywalkresearch`) are already committed under **Signing &
+Capabilities**, so the project builds and runs as-is for anyone with access
+to that team. Building under your **own** Apple ID instead:
+
 1. Select the **WayWalkResearch** target → **Signing & Capabilities**.
-2. Under **Signing**, choose your own **Team** (the project ships with no
-   team set, since that's tied to your personal Apple ID).
-3. Change **Bundle Identifier** from `com.example.waywalkresearch` to
-   something under your own domain, e.g. `com.yourname.waywalkresearch`.
+2. Under **Signing**, choose your own **Team**.
+3. Change **Bundle Identifier** to something under your own domain, e.g.
+   `com.yourname.waywalkresearch`.
 4. Build target: **iOS 17.0+**, iPhone only. Plug in a device or pick an
    iPhone simulator and hit Run.
 
@@ -23,6 +27,21 @@ Everything else — the two background modes (Location updates, Audio) and
 the location usage descriptions — are already set directly in
 `WayWalkResearch/Info.plist`, so there's nothing else to configure in
 Signing & Capabilities.
+
+## Running tests
+
+```bash
+xcodebuild test -project WayWalkResearch.xcodeproj -scheme WayWalkResearch \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+
+105 tests, ~30s, no simulator location or network required — `WalkSession` is
+driven through the `LocationProviding` protocol with a stand-in that emits
+only the fixes a test hands it. Covers the CSV (`SessionLoggerTests`), the
+`closest_approach_m` calculation (`ClosestApproachTests`), overlapping-prompt
+completions for both audio backends (`AudioPromptPlayerTests`, which also
+covers the status banner), and route/path JSON decoding (`RouteDataTests`,
+`RoutePathTests`).
 
 ## Project layout
 
@@ -33,15 +52,16 @@ WayWalkResearch/
   Models/                        ← Waypoint, Walk, InformationLevel, SessionEvent, RoutePath
   Data/
     RouteDataStore.swift         ← loads route JSON from the app bundle
-    walkA.json, walkB.json       ← sample route data — replace with your real route
+    walkA.json, walkB.json       ← real route data (28 and 27 waypoints)
     walkA_path.json, walkB_path.json ← precomputed walking paths (see "Routed map lines")
     RoutePathStore.swift         ← loads the precomputed paths
     SessionLogger.swift          ← writes one CSV per walk, as it happens
     SessionStore.swift           ← lists/deletes past session files
   Audio/
     AudioPromptPlaying.swift     ← protocol
-    SpeechPromptPlayer.swift     ← speech synthesis (used today)
-    RecordedAudioPromptPlayer.swift ← drop-in replacement once you have recordings
+    RecordedAudioPromptPlayer.swift ← used today; plays bundled MP3s, falls back to TTS per-prompt for any missing file
+    RecordedWaypointAudio/       ← the MP3s themselves, e.g. a2_nav.mp3 / a2_context.mp3 (see "Recorded audio" below)
+    SpeechPromptPlayer.swift     ← pure text-to-speech backend, no recordings needed
   Location/
     WalkSession.swift            ← geofencing + one-shot triggering engine + session logging
   Routing/
@@ -57,10 +77,18 @@ WayWalkResearch/
     Components/
       WaypointPreviewCard.swift   ← the waypoint detail card shared by all three maps
       WaypointMapContent.swift    ← waypoints, radii and route line, shared by all three maps
+      WalkStatusBanner.swift      ← floating "Playing…" / "Walk ended" status pill
   Assets.xcassets/                ← empty AppIcon slot + AccentColor (add a real icon before App Store submission)
   Info.plist
+WayWalkResearchTests/             ← XCTest suite, 105 tests (see "Running tests" above)
 waypoint-picker.html              ← browser tool for placing waypoints on a map and exporting walkA.json / walkB.json
 ```
+
+New `.swift` or resource files must also be added to `project.pbxproj` (file
+reference, build file, group, and the target's Sources/Resources phase) or
+Xcode will not compile them — this project does not use file-system
+synchronized groups. `RecordedWaypointAudio/` is the one exception: it is a
+folder reference, so MP3s dropped in there are picked up automatically.
 
 ## Editing routes
 
@@ -230,7 +258,7 @@ remains, the pre-written prompts in the route JSON.
 
 To regenerate after moving waypoints: open **View route map**, pick the walk,
 then the **⋯** menu → **Generate routed path…**. It routes each consecutive
-pair of waypoints in turn (16 requests for a 17-waypoint route, deliberately
+pair of waypoints in turn (27 requests for Walk A's 28 waypoints, deliberately
 serial — Apple throttles bursts), reports any legs it could not route, and
 hands you a JSON file to share. Put that file in `WayWalkResearch/Data/`,
 make sure it is in the target's Copy Bundle Resources phase, rebuild, and
@@ -253,17 +281,21 @@ does not always include garden paths and internal campus routes.
   zone, confirm audio plays) before the real study.
 - **Bone-conduction headphones** are handled as a standard Bluetooth audio
   output; no extra code needed beyond the audio session options already set
-  in `SpeechPromptPlayer`.
+  in `RecordedAudioPromptPlayer` / `SpeechPromptPlayer`.
 - **Audio interruptions** (calls, notifications, Siri) are caught via
-  `AVAudioSession.interruptionNotification` — speech pauses on interruption
-  and automatically resumes afterward, rather than stopping permanently.
+  `AVAudioSession.interruptionNotification` in both audio backends — playback
+  pauses on interruption and automatically resumes afterward, rather than
+  stopping permanently.
 
 ## Testing tools
 
 - **Debug button**, on the researcher screen during a normal walk, reveals
   a small panel with live GPS accuracy, current waypoint number, distance
-  to the next waypoint, latitude/longitude, and whether the next waypoint
-  is currently armed. Hidden by default.
+  to the next waypoint, latitude/longitude, whether the next waypoint is
+  currently armed, whether a dwell confirmation is in progress, how many
+  waypoints have triggered so far, and which voice is actually in use
+  (the recorded audio or, for a waypoint riding the TTS fallback, the
+  synthesiser voice). Hidden by default.
 - **Waypoint Test Mode**, toggled under **Modes** on the Home screen before
   starting a walk, replaces the normal researcher screen with a live map showing every
   waypoint, your current position, which waypoint is armed (orange), and
@@ -276,21 +308,27 @@ does not always include garden paths and internal campus routes.
   spoken. In the two-condition view the opening that the contextual script
   shares with the navigation prompt is dimmed, so the added context stands
   out — the scripts are alternatives, never played back to back.
-- **Trigger radii are drawn to true scale** on all three maps. At the radii
-  currently in the route data (mostly 5m) they are sub-pixel until you zoom
-  well in. That is deliberate: seeing their real size against the street is
-  the point, and 5m is well below the GPS noise floor (see Known iOS
-  constraints, and `Waypoint.swift`, which advises 20m or more).
+- **Trigger radii are drawn to true scale** on all three maps. At the 5m
+  radius every waypoint in both routes currently uses, they are sub-pixel
+  until you zoom well in. That is deliberate: seeing their real size against
+  the street is the point, and 5m is well below the GPS noise floor (see
+  Known iOS constraints, and `Waypoint.swift`, which advises 20m or more).
 
-## Swapping in recorded audio later
+## Recorded audio
 
-Add files named to match each waypoint (e.g. `a2_nav.mp3`,
-`a2_context.mp3`) to the app bundle, then change one line in `HomeView`:
+`HomeView` runs on `RecordedAudioPromptPlayer` by default — real waypoint
+recordings, not synthesised speech. It looks up `<id>_nav.mp3` /
+`<id>_context.mp3` in `WayWalkResearch/Audio/RecordedWaypointAudio/` (a
+folder reference, so a new MP3 dropped in there is picked up on the next
+build with no project-file changes needed) and falls back to on-device TTS,
+per prompt, for any file that isn't there yet. ~102 of the 110 possible
+recordings exist today; the rest are still riding the fallback.
+
+Both players implement the same `AudioPromptPlaying` protocol, so the
+triggering logic, Home screen, and active-walk screen never know or care
+which one is in use. To run on pure TTS instead — e.g. no recordings have
+been made yet — change the one line in `HomeView`:
 
 ```swift
-@StateObject private var session = WalkSession(audioPlayer: RecordedAudioPromptPlayer())
+@StateObject private var session = WalkSession(audioPlayer: SpeechPromptPlayer())
 ```
-
-Nothing else changes — the triggering logic, Home screen, and active-walk
-screen all depend only on the `AudioPromptPlaying` protocol, not on speech
-synthesis specifically.
