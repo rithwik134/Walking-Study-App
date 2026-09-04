@@ -86,8 +86,8 @@
     "latitude": 51.526872,
     "longitude": -0.132563,
     "triggerRadius": 10,
-    "navigationPrompt": "Turn right onto Euston Road and continue for 150 metres.",
-    "contextualPrompt": "Turn right onto Euston Road and continue for 150 metres. A taxi rank is located on the right. University College Hospital is located in this area."
+    "navigationPrompt": "Turn right onto Euston Road and continue for 100 metres.",
+    "contextualPrompt": "Turn right onto Euston Road and continue for 100 metres. A taxi rank is located on the right. University College Hospital is located in this area."
   },
   {
     "id": "b10",

@@ -711,12 +711,22 @@ final class WalkSession: NSObject, ObservableObject {
         source: TriggerSource,
         note: String? = nil
     ) {
+        // Where they were when this played, as distinct from the closest they
+        // ever got. Measured from the same fix as the logged coordinates, and
+        // ungated on accuracy for the same reason those are: `gps_accuracy_m`
+        // and `fix_age_s` say how much to trust it.
+        let triggerDistance = currentFix.map { fix in
+            CLLocation(latitude: fix.latitude, longitude: fix.longitude)
+                .distance(from: CLLocation(latitude: waypoint.latitude, longitude: waypoint.longitude))
+        }
+
         logger?.append(
             type: .waypointTrigger,
             timestamp: firedAt,
             waypoint: waypoint,
             triggerSource: source,
             closestApproachMetres: closestApproachToArmed,
+            triggerDistanceMetres: triggerDistance,
             latitude: currentLatitude,
             longitude: currentLongitude,
             horizontalAccuracy: currentAccuracy,

@@ -48,14 +48,38 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     /// was armed. Recorded for both trigger sources, and they answer different
     /// questions:
     ///
-    /// - On an `automatic` row it is, in effect, **the distance at which iOS
-    ///   actually fired the fence** — the measurement that reveals how far the
-    ///   effective radius sits from the configured one.
-    /// - On a `manual` row it is how near they got without the fence firing,
-    ///   which says whether the radius was too small or they were off-route.
+    /// It is a minimum over the whole approach, not the distance at any one
+    /// moment — see `triggerDistanceMetres` for that — and answers *"did they
+    /// ever get near this waypoint"*:
     ///
-    /// Empty only when no fix accurate enough to trust arrived at all.
+    /// - A large value means they never came close, which is a route or
+    ///   wayfinding problem rather than a technical one.
+    /// - A small value on a row that needed a backstop means they *were*
+    ///   there and no fix was accurate enough to confirm it, which points at
+    ///   `TriggerTuning.triggerAccuracyLimit` rather than at the radius.
+    ///
+    /// Only fixes accurate to within 50m contribute, so it cannot invent an
+    /// approach the participant never made. Empty when no such fix arrived.
     let closestApproachMetres: Double?
+
+    /// `waypointTrigger` only: how far from the waypoint the participant was
+    /// **at the moment the prompt played**, in metres.
+    ///
+    /// Distinct from `closestApproachMetres`, and the two answer different
+    /// questions. Closest approach asks *"did they ever get near this
+    /// waypoint"* — the radius-sizing question. This asks *"where were they
+    /// when they heard it"*, which for a navigation study is usually the one
+    /// that matters: an instruction to turn is only useful if it arrives
+    /// before the turn.
+    ///
+    /// For a clean automatic fire the two are nearly equal. For a backstop
+    /// they diverge sharply — a participant can have passed within 2m and only
+    /// be told 70m later, and closest approach alone would hide that entirely.
+    ///
+    /// Measured from the same fix as `latitude`/`longitude`, so read it
+    /// against `gps_accuracy_m` and `fix_age_s`: with a stale or imprecise fix
+    /// this is where the app *believed* they were.
+    let triggerDistanceMetres: Double?
 
     let latitude: Double?
     let longitude: Double?
@@ -90,6 +114,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         waypointOrder: Int? = nil,
         triggerSource: TriggerSource? = nil,
         closestApproachMetres: Double? = nil,
+        triggerDistanceMetres: Double? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
         horizontalAccuracy: Double? = nil,
@@ -105,6 +130,7 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         self.waypointOrder = waypointOrder
         self.triggerSource = triggerSource
         self.closestApproachMetres = closestApproachMetres
+        self.triggerDistanceMetres = triggerDistanceMetres
         self.latitude = latitude
         self.longitude = longitude
         self.horizontalAccuracy = horizontalAccuracy

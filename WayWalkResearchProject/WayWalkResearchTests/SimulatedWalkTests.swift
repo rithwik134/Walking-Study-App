@@ -132,12 +132,14 @@ final class SimulatedWalkTests: XCTestCase {
         let rows = session.logger?.events.filter { $0.type == .waypointTrigger } ?? []
         print("\nSIMWALK === \(title) — \(fixCount) fixes ===")
         print("SIMWALK fired: \(rows.count) waypoint(s)")
-        print("SIMWALK " + pad("wp", 6) + pad("source", 11) + pad("closest", 10) + "note")
+        print("SIMWALK " + pad("wp", 6) + pad("source", 11)
+              + pad("closest", 10) + pad("at-fire", 10) + "note")
         for row in rows {
             let closest = row.closestApproachMetres.map { String(format: "%.1f m", $0) } ?? "—"
+            let atFire = row.triggerDistanceMetres.map { String(format: "%.1f m", $0) } ?? "—"
             print("SIMWALK " + pad(row.waypointID ?? "?", 6)
                   + pad(row.triggerSource?.rawValue ?? "?", 11)
-                  + pad(closest, 10) + (row.note ?? ""))
+                  + pad(closest, 10) + pad(atFire, 10) + (row.note ?? ""))
         }
         // Elapsed between consecutive fires, in *simulated* time — the
         // chain-fire tell. Must come from the fix timestamps, not the row's
@@ -191,7 +193,13 @@ final class SimulatedWalkTests: XCTestCase {
             XCTAssertEqual(row.triggerSource, .automatic)
             XCTAssertNil(row.note, "\(row.waypointID ?? "?") should not have needed a backstop")
             let closest = try XCTUnwrap(row.closestApproachMetres)
-            XCTAssertLessThan(closest, 10, "\(row.waypointID ?? "?") fired \(closest)m out")
+            XCTAssertLessThan(closest, 10, "\(row.waypointID ?? "?") never got within 10m")
+            // The number that decides whether the instruction was useful: a
+            // clean fire must happen *at* the waypoint, not merely after
+            // having once been near it.
+            let atFire = try XCTUnwrap(row.triggerDistanceMetres)
+            XCTAssertLessThanOrEqual(atFire, 10,
+                "\(row.waypointID ?? "?") played \(atFire)m from the waypoint")
         }
     }
 

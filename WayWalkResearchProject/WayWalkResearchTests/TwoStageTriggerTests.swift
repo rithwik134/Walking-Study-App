@@ -344,6 +344,49 @@ final class TwoStageTriggerTests: XCTestCase {
         XCTAssertFalse(session.isInsideCurrentRadius)
     }
 
+    /// `closest_approach_m` and `trigger_distance_m` answer different
+    /// questions, and on a backstop row they diverge sharply.
+    ///
+    /// This is the case that motivates the second column: closest approach
+    /// says "they passed within 20m", which reads like a clean trigger, while
+    /// the prompt in fact played once they were 80m away. For a navigation
+    /// instruction that difference is the whole story.
+    func testBackstopRowsShowWhereTheyActuallyWereWhenItPlayed() async throws {
+        await deliver([fix(wp1, metres: 20)])
+        await deliver([fix(wp1, metres: 80)])
+        await deliver([fix(wp1, metres: 85)])
+
+        let row = try XCTUnwrap(triggerRows.first)
+        let closest = try XCTUnwrap(row.closestApproachMetres)
+        let atFire = try XCTUnwrap(row.triggerDistanceMetres)
+
+        XCTAssertEqual(closest, 20, accuracy: 2, "closest approach is the minimum over the approach")
+        XCTAssertEqual(atFire, 85, accuracy: 3, "trigger distance is where they were when it played")
+        XCTAssertGreaterThan(atFire, closest + 50, "the two must not be conflated")
+    }
+
+    /// On a clean fire the two agree, because the fire happens at the closest
+    /// point. That is what makes the divergence above meaningful.
+    func testCleanFiresHaveMatchingCloseAndAtFireDistances() async throws {
+        await deliver([fix(wp1, metres: 4), fix(wp1, metres: 4)])
+
+        let row = try XCTUnwrap(triggerRows.first)
+        let closest = try XCTUnwrap(row.closestApproachMetres)
+        let atFire = try XCTUnwrap(row.triggerDistanceMetres)
+        XCTAssertLessThanOrEqual(atFire, wp1.triggerRadius)
+        XCTAssertEqual(atFire, closest, accuracy: 1)
+    }
+
+    /// A forced prompt records how far away they were when the researcher
+    /// pressed the button — the number that says whether it was cued sensibly.
+    func testManualFiresRecordTheDistanceAtTheMomentOfPressing() async throws {
+        await deliver([fix(wp1, metres: 120)])
+        session.playCurrentWaypoint()
+
+        let row = try XCTUnwrap(triggerRows.first)
+        XCTAssertEqual(try XCTUnwrap(row.triggerDistanceMetres), 120, accuracy: 3)
+    }
+
     /// The row must describe the fix that caused it, not some other one.
     func testTheFiringFixIsTheOneLogged() async throws {
         let old = Date(timeIntervalSinceNow: -30)

@@ -35,13 +35,19 @@ xcodebuild test -project WayWalkResearch.xcodeproj -scheme WayWalkResearch \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-105 tests, ~30s, no simulator location or network required — `WalkSession` is
+138 tests, ~30s, no simulator location or network required — `WalkSession` is
 driven through the `LocationProviding` protocol with a stand-in that emits
 only the fixes a test hands it. Covers the CSV (`SessionLoggerTests`), the
-`closest_approach_m` calculation (`ClosestApproachTests`), overlapping-prompt
-completions for both audio backends (`AudioPromptPlayerTests`, which also
-covers the status banner), and route/path JSON decoding (`RouteDataTests`,
-`RoutePathTests`).
+distance columns (`ClosestApproachTests`), the two-stage trigger and both
+backstops (`TwoStageTriggerTests`), overlapping-prompt completions for both
+audio backends (`AudioPromptPlayerTests`, which also covers the status
+banner), and route/path JSON decoding (`RouteDataTests`, `RoutePathTests`).
+
+`SimulatedWalkTests` is the one to run after touching triggering: it walks a
+synthetic participant along the real walkA geometry at 1.4 m/s with realistic
+GPS noise, and prints what fired, at what distance, and how far apart. It found
+a bug the other 129 tests missed — the recede backstop was unreachable whenever
+fixes were too imprecise to fire on, which is exactly when it is needed.
 
 ## Project layout
 
@@ -80,7 +86,7 @@ WayWalkResearch/
       WalkStatusBanner.swift      ← floating "Playing…" / "Walk ended" status pill
   Assets.xcassets/                ← empty AppIcon slot + AccentColor (add a real icon before App Store submission)
   Info.plist
-WayWalkResearchTests/             ← XCTest suite, 105 tests (see "Running tests" above)
+WayWalkResearchTests/             ← XCTest suite, 138 tests (see "Running tests" above)
 waypoint-picker.html              ← browser tool for placing waypoints on a map and exporting walkA.json / walkB.json
 ```
 
@@ -112,8 +118,9 @@ raises, and the session end.
 
 Columns: `session_id, participant_id, walk, information_level, session_mode,
 event_index, event_type, time_iso, time_local, elapsed_s, waypoint_order,
-waypoint_id, waypoint_name, trigger_source, closest_approach_m, latitude,
-longitude, gps_accuracy_m, fix_time_local, fix_age_s, note`.
+waypoint_id, waypoint_name, trigger_source, closest_approach_m,
+trigger_distance_m, latitude, longitude, gps_accuracy_m, fix_time_local,
+fix_age_s, note`.
 
 Three timing details worth knowing:
 
@@ -161,6 +168,34 @@ the waypoint. Two ways to exclude them: filter on `note` starting `backstop:`,
 or — if your analyser ignores `note` — on `closest_approach_m` exceeding the
 waypoint's `triggerRadius`, which is true of every backstop row by definition,
 since a row that got closer than that would have fired normally.
+
+### Two different distances, and why you need both
+
+Waypoint rows carry two distance columns. They answer different questions and
+can differ by tens of metres:
+
+| Column | Question it answers |
+|---|---|
+| `closest_approach_m` | **Did they ever get near this waypoint?** The minimum distance over the whole approach. The radius-sizing number. |
+| `trigger_distance_m` | **Where were they when they heard it?** The distance at the moment the prompt played. |
+
+For a clean automatic fire the two are nearly equal — the prompt plays at the
+closest point. They diverge sharply on backstop rows. A simulated walk with
+poor GPS produced this:
+
+| waypoint | closest_approach_m | trigger_distance_m | note |
+|---|---|---|---|
+| a1 | 2.0 m | **59.2 m** | `backstop: receded` |
+| a2 | 2.7 m | **54.2 m** | `backstop: receded` |
+
+Read `closest_approach_m` alone and every one of those looks like a textbook
+trigger. In fact the participant was told to turn roughly a minute after
+walking past the turn. **For anything about whether an instruction arrived in
+time to be useful, `trigger_distance_m` is the column to use.**
+
+`trigger_distance_m` is measured from the same fix as `latitude`/`longitude`,
+so read it against `gps_accuracy_m` and `fix_age_s` — with a stale or imprecise
+fix it is where the app *believed* they were.
 
 ### How close they got: `closest_approach_m`
 
