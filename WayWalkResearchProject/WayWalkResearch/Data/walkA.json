@@ -37,7 +37,7 @@
     "longitude": -0.132501,
     "triggerRadius": 10,
     "navigationPrompt": "In 200 metres turn right into Woburn Square",
-    "contextualPrompt": "In 200 metres turn right into Woburn Square.\nYou are entering the main UCL campus area, characterised by university buildings, shops and moderate pedestrian activity"
+    "contextualPrompt": "In 50 metres cross Malet Street. You are entering the main UCL campus area, characterised by university buildings, shops and moderate pedestrian activity"
   },
   {
     "id": "a5",
@@ -46,8 +46,8 @@
     "latitude": 51.522752,
     "longitude": -0.131772,
     "triggerRadius": 10,
-    "navigationPrompt": "Cross Malet Street then continue on Byng Place",
-    "contextualPrompt": "Cross Malet Street and continue into Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
+    "navigationPrompt": "Cross Malet Street then continue on Byng Place for 150 metres",
+    "contextualPrompt": "Cross Malet Street and continue into Byng Place for 150 metres. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
   },
   {
     "id": "a6",
@@ -147,7 +147,7 @@
     "longitude": -0.131871,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right onto Gordon Street then cross the road using the crossing and continue straight for 200 metres",
-    "contextualPrompt": "Turn right onto Gordon Street then cross the road using the zebra crossing and continue north for 200 metres"
+    "contextualPrompt": "Turn right onto Gordon Street then cross the road using the zebra crossing and continue north for 150 metres"
   },
   {
     "id": "a16",
@@ -247,7 +247,7 @@
     "longitude": -0.131546,
     "triggerRadius": 10,
     "navigationPrompt": "Cross Euston Square then continue straight for 50 metres",
-    "contextualPrompt": "Cross the bus loop on your right via the signalled crossing, then continue south for 50 metres."
+    "contextualPrompt": "Cross the Euston Square bus loop on your right via the signalled crossing, then continue south for 50 metres."
   },
   {
     "id": "a26",
@@ -263,16 +263,26 @@
     "id": "a27",
     "order": 27,
     "name": "Waypoint 27",
-    "latitude": 51.527242,
-    "longitude": -0.130508,
+    "latitude": 51.527212,
+    "longitude": -0.130780,
     "triggerRadius": 10,
-    "navigationPrompt": "Turn right and continue on Upper Woburn Place for 60 metres, where the destination is on your left. Central House.",
-    "contextualPrompt": "Turn right and continue onto Upper Woburn Place for 60 metres, where the destination is on your left. St Pancras New Church is located on your left. The church is a prominent historic landmark in this part of Bloomsbury."
+    "navigationPrompt": "",
+    "contextualPrompt": "Turn left and cross Upper Woburn Place, then turn right to continue"
   },
   {
     "id": "a28",
     "order": 28,
     "name": "Waypoint 28",
+    "latitude": 51.527242,
+    "longitude": -0.130508,
+    "triggerRadius": 10,
+    "navigationPrompt": "Turn right and continue on Upper Woburn Place for 60 metres, where the destination is on your left. Central House.",
+    "contextualPrompt": "Turn right and continue south on Upper Woburn Place for 60 metres, where the destination is on your left. St Pancras New Church is located on your left. The church is a prominent historic landmark in this part of Bloomsbury."
+  },
+  {
+    "id": "a29",
+    "order": 29,
+    "name": "Waypoint 29",
     "latitude": 51.526798,
     "longitude": -0.130066,
     "triggerRadius": 10,
