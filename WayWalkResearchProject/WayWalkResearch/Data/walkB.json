@@ -47,7 +47,7 @@
     "longitude": -0.130986,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right onto Eversholt Street then in 120 metres, take the stairs on the left",
-    "contextualPrompt": "Continue north on Eversholt Street for 50 metres."
+    "contextualPrompt": "Turn right then continue north on Eversholt Street for 50 metres."
   },
   {
     "id": "b6",
@@ -87,7 +87,7 @@
     "longitude": -0.133351,
     "triggerRadius": 10,
     "navigationPrompt": "Turn left onto the path and continue for 100 metres",
-    "contextualPrompt": "Take the south exit path that connects onto Euston Road."
+    "contextualPrompt": "Turn left then take the south path for 100 metres that connects onto Euston Road."
   },
   {
     "id": "b10",
@@ -146,7 +146,7 @@
     "latitude": 51.525897,
     "longitude": -0.133276,
     "triggerRadius": 10,
-    "navigationPrompt": "Cross Gower Place and continue south for 150 metres. One-way traffic approaches from the left",
+    "navigationPrompt": "Cross Gower Place and continue south for 150 metres.",
     "contextualPrompt": "Cross Gower Place and continue south for 150 metres. One-way traffic approaches from the left"
   },
   {
@@ -227,7 +227,7 @@
     "longitude": -0.130093,
     "triggerRadius": 10,
     "navigationPrompt": "Enter Woburn Square, then In 80 metres continue around the square and return to the entrance.",
-    "contextualPrompt": "Enter Woburn Square then follow the path to your left for 80 metres, where it leads back to the entrance. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
+    "contextualPrompt": "Enter Woburn Square then follow the path straight ahead for 80 metres, where it leads back to the entrance. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
   },
   {
     "id": "b24",

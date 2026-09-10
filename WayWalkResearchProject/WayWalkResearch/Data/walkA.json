@@ -266,7 +266,7 @@
     "latitude": 51.527212,
     "longitude": -0.130780,
     "triggerRadius": 10,
-    "navigationPrompt": "",
+    "navigationPrompt": "Turn left and cross Upper Woburn Place, then turn right to continue",
     "contextualPrompt": "Turn left and cross Upper Woburn Place, then turn right to continue"
   },
   {
