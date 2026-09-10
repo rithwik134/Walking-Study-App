@@ -284,7 +284,10 @@ struct ActiveWalkView: View {
             // lands — and, with GPS accuracy, what says whether the trigger's
             // accuracy limit is achievable on this route.
             debugRow("Fix age", session.currentFix.map { String(format: "%.0fs", Date().timeIntervalSince($0.timestamp)) } ?? "—")
-            debugRow("Triggered", "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)")
+            // Against the route length for this condition, not the raw
+            // waypoint count — waypoints off this condition's route are never
+            // armed, so they can never be triggered.
+            debugRow("Triggered", "\(session.triggeredWaypointIDs.count) of \(walk.routeLength(for: session.informationLevel))")
             debugRow("Voice", session.audioVoiceDescription)
         }
         .font(.system(.footnote, design: .monospaced))
@@ -351,6 +354,13 @@ struct WalkSummaryView: View {
     let walk: Walk
     var onDone: () -> Void
 
+    /// How many waypoints this condition's route actually contains. Comparing
+    /// against `walk.waypoints.count` would raise "Not every waypoint fired"
+    /// on every clean walk of a condition-branched route.
+    private var routeLength: Int {
+        walk.routeLength(for: session.informationLevel)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -359,12 +369,12 @@ struct WalkSummaryView: View {
                     LabeledContent("Condition", value: session.informationLevel.rawValue)
                     LabeledContent(
                         "Waypoints triggered",
-                        value: "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)"
+                        value: "\(session.triggeredWaypointIDs.count) of \(routeLength)"
                     )
                     LabeledContent("Flags", value: "\(flagCount)")
                 }
 
-                if session.triggeredWaypointIDs.count < walk.waypoints.count {
+                if session.triggeredWaypointIDs.count < routeLength {
                     Section {
                         Label(
                             "Not every waypoint fired.",

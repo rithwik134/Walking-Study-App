@@ -129,16 +129,31 @@ final class RoutePathTests: XCTestCase {
         XCTAssertEqual(waypoint.audioKey(for: .navigationPlusContext), "a1_context")
     }
 
-    func testContextFallsBackToNavigationWhenNoContextualScriptExists() {
-        for contextual in [nil, ""] as [String?] {
+    /// No cross-condition fallback, in either direction. A missing script means
+    /// the waypoint is off that condition's route and is skipped, not that it
+    /// borrows the other condition's line — borrowing is what made the Gordon
+    /// Square navigation branch speak its turn during a contextual walk.
+    func testAMissingScriptMeansOffRouteNotFallback() {
+        for contextual in [nil, "", "   "] as [String?] {
             let waypoint = Waypoint(
-                id: "a1", order: 1, name: "1",
+                id: "a10", order: 10, name: "10",
                 latitude: 51.5, longitude: -0.13, triggerRadius: 5,
                 navigationPrompt: "Head south.",
                 contextualPrompt: contextual
             )
-            XCTAssertEqual(waypoint.script(for: .navigationPlusContext), "Head south.")
+            XCTAssertFalse(waypoint.isOnRoute(for: .navigationPlusContext))
+            XCTAssertNotEqual(waypoint.script(for: .navigationPlusContext), "Head south.")
+            XCTAssertTrue(waypoint.isOnRoute(for: .navigationOnly))
         }
+
+        let contextOnly = Waypoint(
+            id: "a11", order: 11, name: "11",
+            latitude: 51.5, longitude: -0.13, triggerRadius: 5,
+            navigationPrompt: "",
+            contextualPrompt: "Turn right to exit the square."
+        )
+        XCTAssertFalse(contextOnly.isOnRoute(for: .navigationOnly))
+        XCTAssertTrue(contextOnly.isOnRoute(for: .navigationPlusContext))
     }
 
     // Per-condition script coverage across the shipped routes lives in

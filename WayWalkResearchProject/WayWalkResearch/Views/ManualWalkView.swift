@@ -156,7 +156,10 @@ struct ManualWalkView: View {
                     .font(.caption.bold())
                     .foregroundStyle(.indigo)
                 Spacer()
-                Text("\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count) played")
+                // Route length for this condition, not the raw waypoint count:
+                // waypoints off this condition's route are skipped, so the cue
+                // button never offers them.
+                Text("\(session.triggeredWaypointIDs.count) of \(walk.routeLength(for: session.informationLevel)) played")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

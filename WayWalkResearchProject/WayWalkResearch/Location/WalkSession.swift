@@ -459,6 +459,22 @@ final class WalkSession: NSObject, ObservableObject {
             self.currentRegion = nil
         }
 
+        // Skip waypoints that carry no script for the running condition: they
+        // are not on this condition's route. The two Gordon Square branches are
+        // encoded exactly this way, and arming one of them stalls the walk —
+        // the other branch's waypoint sits ~33m away, so no fix ever lands
+        // inside its 10m radius, and the recede backstop cannot rescue it
+        // either because the seeded closest approach already exceeds
+        // `backstopApproachDistance`. Everything after it would be blocked.
+        //
+        // Skipped waypoints are never armed, never spoken and never logged. A
+        // CSV row for a prompt that was never played records a queue advance,
+        // not an arrival, and would be read as one by the analyser.
+        while currentIndex < walkQueue.count,
+              !walkQueue[currentIndex].isOnRoute(for: informationLevel) {
+            currentIndex += 1
+        }
+
         guard currentIndex < walkQueue.count else {
             isNextWaypointArmed = false
             routeIsComplete = true
@@ -774,10 +790,12 @@ final class WalkSession: NSObject, ObservableObject {
     private func playPrompt(for waypoint: Waypoint) {
         let script = waypoint.script(for: informationLevel)
 
-        // Context-only waypoints have no navigation script, so in Navigation
-        // Only nothing is spoken. Claiming "Playing" for silence would be a
-        // lie, and the completion may never arrive for an empty utterance,
-        // which would leave the banner stuck.
+        // Unreachable in a real session: `armNextWaypoint()` skips waypoints
+        // with no script for this condition, so one can never be delivered.
+        // Kept because it is the last line of defence for a hazard that is
+        // silent when it bites — claiming "Playing" for silence would be a lie,
+        // and an empty utterance's completion may never arrive, leaving the
+        // banner stuck for the rest of the walk.
         guard !script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
         let id = waypoint.id

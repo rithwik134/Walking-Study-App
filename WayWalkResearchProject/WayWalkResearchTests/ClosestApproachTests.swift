@@ -220,8 +220,11 @@ final class ClosestApproachTests: XCTestCase {
     func testDistanceIsMeasuredToTheArmedWaypoint() async throws {
         session.playCurrentWaypoint()                    // clear waypoint 1
 
-        // Stand exactly on waypoint 2 and confirm it reads ~0.
-        let waypoint2 = walk.waypoints[1]
+        // Stand exactly on the second waypoint *of this condition's route* and
+        // confirm it reads ~0. Not `walk.waypoints[1]` — `a2` carries no
+        // navigation script, so under Navigation Only it is skipped and never
+        // armed, and standing on it would measure the distance to `a3`.
+        let waypoint2 = walk.waypoints.filter { $0.isOnRoute(for: .navigationOnly) }[1]
         await deliver([CLLocation(
             coordinate: waypoint2.coordinate, altitude: 0,
             horizontalAccuracy: 5, verticalAccuracy: 5, timestamp: Date()

@@ -57,10 +57,12 @@ final class SimulatedWalkTests: XCTestCase {
 
     // MARK: - The walk
 
-    /// Fixes along the first three waypoints of walkA, at 1.4 m/s, one per
-    /// second, with `sigma` metres of positional noise.
+    /// Fixes along the first three waypoints *of the Navigation Only route*
+    /// through walkA, at 1.4 m/s, one per second, with `sigma` metres of
+    /// positional noise.
     private func simulatedFixes(
         walk: Walk,
+        level: InformationLevel = .navigationOnly,
         waypointCount: Int = 3,
         sigma: Double,
         reportedAccuracy: CLLocationAccuracy,
@@ -70,7 +72,14 @@ final class SimulatedWalkTests: XCTestCase {
         var rng = SeededRNG(seed: seed)
         let frame = Frame(originLat: walk.waypoints[0].latitude,
                           originLon: walk.waypoints[0].longitude)
-        let points = walk.waypoints.prefix(waypointCount).map { frame.toMetres($0.coordinate) }
+        // The waypoints this condition actually arms, not the raw array. `a2`
+        // carries no navigation script, so under Navigation Only it is skipped
+        // and can never fire — routing the simulated walk over it would leave
+        // this harness expecting a prompt that is not supposed to exist. The
+        // two conditions genuinely diverge through Gordon Square, so this is
+        // also what makes the contextual walk follow its own path.
+        let route = walk.waypoints.filter { $0.isOnRoute(for: level) }
+        let points = route.prefix(waypointCount).map { frame.toMetres($0.coordinate) }
 
         // Approach from 30m before waypoint 1, on the line back from waypoint 2,
         // and carry on 30m past the last waypoint.
@@ -254,6 +263,58 @@ final class SimulatedWalkTests: XCTestCase {
         print("\n--- CSV (first 5 rows) ---")
         for line in (session.logger?.csvText ?? "").split(separator: "\n").prefix(5) {
             print(line)
+        }
+    }
+
+    // MARK: - Whole routes, both conditions
+
+    /// **The Gordon Square regression.** Walk both routes end to end, in both
+    /// conditions, and require every waypoint on that condition's route to
+    /// fire exactly once.
+    ///
+    /// Before waypoints were skipped by condition, Walk A under Navigation Only
+    /// stalled permanently at `a11`: the contextual branch is ~33m away across
+    /// the square, outside its 10m radius, and the recede backstop could not
+    /// rescue it because the seeded closest approach already exceeded
+    /// `backstopApproachDistance`. Everything from `a11` onward was lost. The
+    /// symmetric failure under Navigation + Context was `a10` firing and
+    /// reading out the wrong turn.
+    func testEveryConditionWalksItsWholeRouteWithoutStalling() async throws {
+        for walkID in WalkID.allCases {
+            for level in InformationLevel.allCases {
+                let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(walkID))
+                let expected = walk.waypoints.filter { $0.isOnRoute(for: level) }.map(\.id)
+
+                let session = WalkSession(audioPlayer: FakePromptPlayer(),
+                                          locationManager: SilentLocationManager())
+                session.start(walk: walk, informationLevel: level,
+                              participantID: "SIMFULL", mode: .test)
+
+                let fixes = simulatedFixes(walk: walk, level: level,
+                                           waypointCount: expected.count,
+                                           sigma: 5, reportedAccuracy: 8)
+                for fix in fixes {
+                    session.locationManager(CLLocationManager(), didUpdateLocations: [fix])
+                    try? await Task.sleep(for: .milliseconds(1))
+                    if session.routeIsComplete { break }
+                }
+
+                let fired = (session.logger?.events ?? [])
+                    .filter { $0.type == .waypointTrigger }
+                    .compactMap(\.waypointID)
+
+                XCTAssertEqual(fired, expected,
+                    "\(walkID.rawValue) / \(level.rawValue): every on-route waypoint should fire once, in order")
+                XCTAssertTrue(session.routeIsComplete,
+                    "\(walkID.rawValue) / \(level.rawValue): the walk stalled")
+
+                // And the off-route branch must be absent from the CSV entirely,
+                // not merely present with a blank script.
+                for wp in walk.waypoints where !wp.isOnRoute(for: level) {
+                    XCTAssertFalse(fired.contains(wp.id),
+                        "\(wp.id) is off the \(level.rawValue) route and must not be logged")
+                }
+            }
         }
     }
 }

@@ -45,6 +45,11 @@ final class RouteDataTests: XCTestCase {
 
         let wp = try JSONDecoder().decode(Waypoint.self, from: json)
         XCTAssertNil(wp.contextualPrompt)
+        // Absent is the same as empty: not on the contextual route. There is
+        // deliberately no fallback to the navigation prompt.
+        XCTAssertEqual(wp.script(for: .navigationPlusContext), "")
+        XCTAssertFalse(wp.isOnRoute(for: .navigationPlusContext))
+        XCTAssertTrue(wp.isOnRoute(for: .navigationOnly))
     }
 
     func testWaypointCoordinateProperty() throws {
@@ -81,12 +86,12 @@ final class RouteDataTests: XCTestCase {
 
     func testWalkAWaypointCount() throws {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
-        XCTAssertEqual(walk.waypoints.count, 28)
+        XCTAssertEqual(walk.waypoints.count, 29)
     }
 
     func testWalkBWaypointCount() throws {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
-        XCTAssertEqual(walk.waypoints.count, 27)
+        XCTAssertEqual(walk.waypoints.count, 31)
     }
 
     // MARK: - Ordering
@@ -138,38 +143,71 @@ final class RouteDataTests: XCTestCase {
         }
     }
 
-    /// The contextual condition must never be silent: where a waypoint has no
-    /// contextual script, `script(for:)` falls back to the navigation prompt.
-    func testContextualConditionIsNeverSilent() throws {
-        for wp in try allWaypoints() {
-            let script = wp.script(for: .navigationPlusContext)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            XCTAssertFalse(script.isEmpty, "\(wp.id) has nothing to say in Navigation + Context")
-        }
+    // MARK: - Condition-branched routes
+    //
+    // A waypoint with no script for a condition is not on that condition's
+    // route: `WalkSession` skips it rather than firing it silently. These two
+    // tests pin the exact off-route set per condition, and they are the guard
+    // that makes dropping the old navigation-prompt fallback safe — without
+    // them, a waypoint authored with a forgotten `contextualPrompt` would
+    // quietly vanish from the contextual route and nobody would find out until
+    // a participant walked past it.
+    //
+    // Both lists are in walk order. Update them only alongside a deliberate
+    // route change.
+
+    /// Waypoints that exist purely to deliver environmental context and carry
+    /// no navigation instruction, plus `a11` — the contextual branch through
+    /// Gordon Square. Skipped under Navigation Only.
+    func testOffRouteUnderNavigationOnlyIsExactlyTheKnownSet() throws {
+        let offRoute = try allWaypoints()
+            .filter { !$0.isOnRoute(for: .navigationOnly) }
+            .map(\.id)
+        XCTAssertEqual(offRoute, ["a2", "a11", "a16", "a27", "b2", "b11", "b29", "b30"])
     }
 
-    /// Some waypoints exist purely to deliver environmental context and carry
-    /// no navigation instruction, so they are deliberately silent in the
-    /// Navigation Only condition. Pinned so that a data edit which blanks a
-    /// prompt by accident shows up as a failure rather than as silence in the
-    /// field.
-    func testOnlyTheKnownContextOnlyWaypointsAreSilentInNavigationOnly() throws {
-        var silent: [String] = []
+    /// The navigation branches through Gordon Square — `a10` in Walk A, `b21`
+    /// in Walk B — and nothing else. Under Navigation + Context the route
+    /// crosses the square the other way, so these must not fire; before the
+    /// fallback was removed they did, reading out the wrong turn in a
+    /// synthesised voice because no `_context.mp3` was ever recorded for them.
+    func testOffRouteUnderNavigationPlusContextIsExactlyTheKnownSet() throws {
+        let offRoute = try allWaypoints()
+            .filter { !$0.isOnRoute(for: .navigationPlusContext) }
+            .map(\.id)
+        XCTAssertEqual(offRoute, ["a10", "b21"])
+    }
+
+    /// The branch pairs must not overlap: a waypoint off both routes would be
+    /// dead data, and the two conditions must each still reach the end.
+    func testEachConditionHasAUsableRoute() throws {
+        let walkA = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
+        let walkB = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
+
+        XCTAssertEqual(walkA.routeLength(for: .navigationOnly), 25)
+        XCTAssertEqual(walkA.routeLength(for: .navigationPlusContext), 28)
+        XCTAssertEqual(walkB.routeLength(for: .navigationOnly), 27)
+        XCTAssertEqual(walkB.routeLength(for: .navigationPlusContext), 30)
+    }
+
+    /// Every on-route waypoint must have its recording in the bundle. Missing
+    /// files degrade to text-to-speech per prompt, which is survivable but is
+    /// an audible condition confound in the middle of an otherwise recorded
+    /// walk — and a route edit that outruns the recordings should fail here
+    /// rather than in the field.
+    func testEveryOnRouteWaypointHasItsRecording() throws {
         for wp in try allWaypoints() {
-            if wp.script(for: .navigationOnly)
-                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                silent.append(wp.id)
+            for level in InformationLevel.allCases where wp.isOnRoute(for: level) {
+                let key = wp.audioKey(for: level)
+                XCTAssertNotNil(
+                    Bundle.main.url(
+                        forResource: key,
+                        withExtension: "mp3",
+                        subdirectory: "RecordedWaypointAudio"
+                    ),
+                    "\(key).mp3 is missing — \(wp.id) would fall back to TTS under \(level.rawValue)"
+                )
             }
-        }
-        XCTAssertEqual(silent, ["a2", "a11", "a16", "b2", "b10", "b26"])
-    }
-
-    /// Where a contextual script is absent the app must fall back rather than
-    /// go quiet — these are the waypoints relying on that fallback today.
-    func testWaypointsWithoutContextualScriptFallBackToNavigation() throws {
-        for wp in try allWaypoints() where (wp.contextualPrompt ?? "").isEmpty {
-            XCTAssertEqual(wp.script(for: .navigationPlusContext), wp.navigationPrompt)
-            XCTAssertFalse(wp.navigationPrompt.isEmpty, "\(wp.id) has neither script")
         }
     }
 

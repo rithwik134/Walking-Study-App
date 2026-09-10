@@ -102,9 +102,7 @@ struct WaypointPreviewCard: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if contextual.isEmpty {
-            Text("No contextual script — the navigation prompt is used instead.")
-                .italic()
-                .foregroundStyle(.secondary)
+            offRouteText(for: .navigationPlusContext)
         } else if let (shared, added) = Self.splitSharedPrefix(
             navigation: waypoint.navigationPrompt,
             contextual: contextual
@@ -122,8 +120,23 @@ struct WaypointPreviewCard: View {
             title: level.rawValue,
             tint: level == .navigationOnly ? .blue : .purple
         ) {
-            Text(waypoint.script(for: level).trimmingCharacters(in: .whitespacesAndNewlines))
+            if waypoint.isOnRoute(for: level) {
+                Text(waypoint.script(for: level).trimmingCharacters(in: .whitespacesAndNewlines))
+            } else {
+                offRouteText(for: level)
+            }
         }
+    }
+
+    /// A waypoint with no script for a condition is not on that condition's
+    /// route — the Gordon Square branches are built this way — and is skipped
+    /// outright rather than fired silently. Saying so beats an empty block,
+    /// which reads as missing data on the one screen a researcher uses to
+    /// check the branch before a run.
+    private func offRouteText(for level: InformationLevel) -> some View {
+        Text("Not on this route — skipped under \(level.rawValue).")
+            .italic()
+            .foregroundStyle(.secondary)
     }
 
     private func promptBlock<Content: View>(

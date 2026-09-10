@@ -58,7 +58,7 @@ WayWalkResearch/
   Models/                        ← Waypoint, Walk, InformationLevel, SessionEvent, RoutePath
   Data/
     RouteDataStore.swift         ← loads route JSON from the app bundle
-    walkA.json, walkB.json       ← real route data (28 and 27 waypoints)
+    walkA.json, walkB.json       ← real route data (29 and 31 waypoints)
     walkA_path.json, walkB_path.json ← precomputed walking paths (see "Routed map lines")
     RoutePathStore.swift         ← loads the precomputed paths
     SessionLogger.swift          ← writes one CSV per walk, as it happens
@@ -108,6 +108,44 @@ Route data is read from the app bundle only — there is no Documents copy and
 no in-app editing, so changing a route always means replacing the JSON and
 rebuilding. If you move or renumber waypoints, regenerate the routed map
 lines too (below).
+
+### Waypoints that belong to only one condition
+
+**A waypoint with an empty prompt for a condition is not on that condition's
+route.** It is skipped: never armed, never spoken, and never written to the
+CSV. It is not fired silently.
+
+This is how the two conditions cross Gordon Square by different paths. In
+Walk A, `a10` carries a navigation prompt and no contextual one, and `a11`
+the reverse — so a Navigation Only participant is sent one way round the
+square and a Navigation + Context participant the other. In Walk B, `b21` is
+navigation-only; the contextual route through the square is carried by `b20`'s
+longer script instead.
+
+The same rule covers waypoints that exist purely to describe the surroundings
+(`a2`, `a16`, `a27`, `b2`, `b11`, `b29`, `b30`). They have no navigation
+instruction — the preceding waypoint already gave it — so a Navigation Only
+walk steps straight over them.
+
+Two things follow, and both matter when reading the data:
+
+- **A CSV has fewer waypoint rows than the route has waypoints, and the
+  number differs by condition.** Walk A fires 25 of 29 under Navigation Only
+  and 28 of 29 under Navigation + Context; Walk B fires 27 of 31 and 30 of
+  31. This is correct, not a missed prompt. `waypoint_order` still matches
+  the JSON `order`, so the gaps are visible and identifiable.
+- **The waypoint counter on screen skips numbers.** Walk A under Navigation
+  Only goes 1 → 3, and 10 → 12 at Gordon Square. The number shown is always
+  the waypoint's own `order`, so it can be read straight against the map and
+  the CSV.
+
+Tapping a waypoint on any of the map screens shows which conditions it
+belongs to; one that is off the displayed route says so in place of its
+script. If you author a new waypoint and leave a prompt blank, you are
+removing it from that condition's route — the app will not fall back to the
+other condition's text. `RouteDataTests` pins the exact list of one-condition
+waypoints, so an accidental blank fails the test suite rather than going
+unnoticed until a participant walks past it.
 
 ## Recorded data
 
@@ -350,13 +388,28 @@ The line is decoration for the researcher. Navigation ground truth is, and
 remains, the pre-written prompts in the route JSON.
 
 To regenerate after moving waypoints: open **View route map**, pick the walk,
-then the **⋯** menu → **Generate routed path…**. It routes each consecutive
-pair of waypoints in turn (27 requests for Walk A's 28 waypoints, deliberately
-serial — Apple throttles bursts), reports any legs it could not route, and
-hands you a JSON file to share. Put that file in `WayWalkResearch/Data/`,
-make sure it is in the target's Copy Bundle Resources phase, rebuild, and
-**check the drawn line by eye before committing** — Apple's pedestrian data
-does not always include garden paths and internal campus routes.
+To regenerate after moving waypoints, run this on the Mac from the repo root:
+
+```bash
+swift run --package-path Tools/GenerateRoutePaths GenerateRoutePaths
+```
+
+It rebuilds both files in place in `WayWalkResearch/Data/`, which are already
+in the target's Copy Bundle Resources phase, so you only need to rebuild the
+app. It routes each consecutive pair of waypoints in turn (58 requests for the
+two routes, deliberately serial — Apple throttles bursts, and backs off when
+it does), and prints any leg it could not route. It needs network and takes a
+couple of minutes.
+
+The in-app route is still there if you prefer it, or if the tool cannot reach
+Apple's servers: open **View route map**, pick the walk, then the **⋯** menu →
+**Generate routed path…**, and share the resulting file to
+`WayWalkResearch/Data/`. You have to do it once per walk.
+
+Either way, **check the drawn line by eye before committing** — Apple's
+pedestrian data does not always include garden paths and internal campus
+routes. Walk A doubles back about 33m through Gordon Square, which is
+expected: the line is drawn over both condition branches at once (below).
 
 ## Known iOS constraints
 

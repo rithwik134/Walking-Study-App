@@ -77,8 +77,29 @@ final class TwoStageTriggerTests: XCTestCase {
         session.logger?.events.filter { $0.type == .waypointTrigger } ?? []
     }
 
-    private var wp1: Waypoint { walk.waypoints[0] }
-    private var wp2: Waypoint { walk.waypoints[1] }
+    /// Walk A as this session actually walks it. `a2` carries no navigation
+    /// script, so under Navigation Only it is off-route and `armNextWaypoint()`
+    /// skips it — `walk.waypoints[1]` is a waypoint these tests can never
+    /// reach. Filtering the same way the session does keeps "the next
+    /// waypoint" meaning the next one that fires.
+    private var routeWaypoints: [Waypoint] {
+        walk.waypoints.filter { $0.isOnRoute(for: .navigationOnly) }
+    }
+
+    private var wp1: Waypoint { routeWaypoints[0] }
+    private var wp2: Waypoint { routeWaypoints[1] }
+
+    /// Cues forward with the researcher failsafe until `id` is the armed
+    /// waypoint, without firing it. Uses only the real delivery path, so the
+    /// queue advances exactly as it would on a walk — including the skips.
+    private func cueForward(in walk: Walk, to id: String) {
+        for _ in 0...walk.waypoints.count {
+            let armed = walk.waypoints[session.currentWaypointNumber - 1]
+            if armed.id == id { return }
+            session.playCurrentWaypoint()
+        }
+        XCTFail("never reached \(id)")
+    }
 
     // MARK: - The chain-fire regression
 
@@ -130,7 +151,7 @@ final class TwoStageTriggerTests: XCTestCase {
         XCTAssertEqual(triggerRows.count, 1)
         XCTAssertEqual(triggerRows.first?.triggerSource, .automatic)
         XCTAssertNil(triggerRows.first?.note, "a normal fire carries no backstop note")
-        XCTAssertEqual(session.currentWaypointNumber, 2, "should have advanced")
+        XCTAssertEqual(session.currentWaypointNumber, wp2.order, "should have advanced to the next on-route waypoint")
     }
 
     /// A coalesced batch must fire without waiting on any wall clock. This is
@@ -215,7 +236,7 @@ final class TwoStageTriggerTests: XCTestCase {
         XCTAssertEqual(triggerRows.count, 1)
         XCTAssertEqual(triggerRows.first?.triggerSource, .automatic)
         XCTAssertEqual(triggerRows.first?.note, "backstop: wake_exit")
-        XCTAssertEqual(session.currentWaypointNumber, 2, "the walk must be unblocked")
+        XCTAssertEqual(session.currentWaypointNumber, wp2.order, "the walk must be unblocked")
     }
 
     /// You cannot have passed what you never reached.
@@ -316,7 +337,7 @@ final class TwoStageTriggerTests: XCTestCase {
 
         XCTAssertEqual(triggerRows.count, 1)
         XCTAssertEqual(triggerRows.first?.triggerSource, .manual)
-        XCTAssertEqual(session.currentWaypointNumber, 2)
+        XCTAssertEqual(session.currentWaypointNumber, wp2.order)
     }
 
     // MARK: - Invariants
@@ -412,5 +433,101 @@ final class TwoStageTriggerTests: XCTestCase {
         let row = try XCTUnwrap(triggerRows.first)
         let age = try XCTUnwrap(row.fixTimestamp.map { row.timestamp.timeIntervalSince($0) })
         XCTAssertGreaterThan(age, 20, "a 25s-old fix should report a large age")
+    }
+
+    // MARK: - Condition-branched routes
+    //
+    // The two conditions cross Gordon Square by different paths, encoded as
+    // waypoints carrying a script for one condition only: `a10` navigation,
+    // `a11` contextual. A waypoint off the running condition's route is skipped
+    // at arm time — never armed, never spoken, never logged.
+    //
+    // The bug these cover: arming `a11` during a Navigation Only walk blocked
+    // the entire rest of Walk A. `a11` sits ~33m away across the square, so no
+    // fix ever landed inside its 10m radius, and the recede backstop could not
+    // rescue it either — the seeded closest approach already exceeded
+    // `backstopApproachDistance`, so its guard never opened.
+
+    /// Firing `a10` must arm `a12`, stepping straight over the contextual
+    /// branch. Nothing about `a11` may reach the CSV.
+    func testTheContextualBranchIsSkippedUnderNavigationOnly() async throws {
+        let a10 = try XCTUnwrap(walk.waypoints.first { $0.id == "a10" })
+        cueForward(in: walk, to: "a10")
+
+        await deliver([fix(a10, metres: 3), fix(a10, metres: 3)])
+
+        XCTAssertEqual(triggerRows.last?.waypointID, "a10")
+        XCTAssertEqual(session.currentWaypointNumber, 12, "a11 must have been stepped over")
+        XCTAssertFalse(triggerRows.contains { $0.waypointID == "a11" },
+                       "a11 is off this route — it must not appear in the log at all")
+
+        // And the walk keeps moving: a12 is armed and fires normally.
+        let a12 = try XCTUnwrap(walk.waypoints.first { $0.id == "a12" })
+        await deliver([fix(a12, metres: 3), fix(a12, metres: 3)])
+        XCTAssertEqual(triggerRows.last?.waypointID, "a12")
+    }
+
+    /// The mirror image: under Navigation + Context the *navigation* branch is
+    /// the one that must not fire. Before the fallback in `script(for:)` was
+    /// removed, `a10` fired here and read out its navigation turn — sending the
+    /// participant the wrong way round the square, in a synthesised voice,
+    /// because no `a10_context.mp3` exists to play.
+    func testTheNavigationBranchIsSkippedUnderNavigationPlusContext() async throws {
+        session.start(walk: walk, informationLevel: .navigationPlusContext,
+                      participantID: "TWOSTAGE", mode: .test)
+        let a9 = try XCTUnwrap(walk.waypoints.first { $0.id == "a9" })
+        cueForward(in: walk, to: "a9")
+
+        await deliver([fix(a9, metres: 3), fix(a9, metres: 3)])
+
+        XCTAssertEqual(session.currentWaypointNumber, 11, "a10 must have been stepped over")
+
+        // Standing squarely on a10 must still say nothing.
+        let a10 = try XCTUnwrap(walk.waypoints.first { $0.id == "a10" })
+        await deliver([fix(a10, metres: 1), fix(a10, metres: 1)])
+        XCTAssertFalse(triggerRows.contains { $0.waypointID == "a10" },
+                       "a10 is off the contextual route")
+        XCTAssertFalse(player.scripts.contains(a10.navigationPrompt),
+                       "a10's navigation script must never be spoken in this condition")
+    }
+
+    /// Walk B's Gordon Square branch, which has no contextual counterpart —
+    /// `b20`'s script carries the contextual route through the square instead.
+    func testWalkBNavigationBranchIsSkippedUnderNavigationPlusContext() async throws {
+        let walkB = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
+        session.start(walk: walkB, informationLevel: .navigationPlusContext,
+                      participantID: "TWOSTAGE", mode: .test)
+        let b20 = try XCTUnwrap(walkB.waypoints.first { $0.id == "b20" })
+        cueForward(in: walkB, to: "b20")
+
+        await deliver([fix(b20, metres: 3), fix(b20, metres: 3)])
+
+        XCTAssertEqual(session.currentWaypointNumber, 22, "b21 must have been stepped over")
+        XCTAssertFalse(triggerRows.contains { $0.waypointID == "b21" })
+    }
+
+    /// Skipping must not fire, speak, or advance past a waypoint that *is* on
+    /// the route — the failure mode would be a whole leg silently consumed.
+    func testSkippingStopsAtTheFirstOnRouteWaypoint() async throws {
+        // a1 fires; a2 is off-route; a3 is on-route and must be what arms.
+        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 3)])
+
+        XCTAssertEqual(session.currentWaypointNumber, 3)
+        XCTAssertEqual(triggerRows.count, 1, "only a1 fired")
+        let region = try XCTUnwrap(manager.monitoredRegion as? CLCircularRegion)
+        XCTAssertEqual(region.identifier, "a3")
+    }
+
+    /// Manual mode skips too: the researcher must not be asked to press Play on
+    /// a waypoint that would say nothing.
+    func testManualModeSkipsOffRouteWaypointsAsWell() async throws {
+        try startSession(mode: .manual)
+
+        session.playCurrentWaypoint()
+        XCTAssertEqual(triggerRows.map(\.waypointID), ["a1"])
+        XCTAssertEqual(session.currentWaypointNumber, 3, "a2 must not be offered")
+
+        session.playCurrentWaypoint()
+        XCTAssertEqual(triggerRows.map(\.waypointID), ["a1", "a3"])
     }
 }
