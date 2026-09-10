@@ -33,8 +33,8 @@
     "id": "a4",
     "order": 4,
     "name": "Waypoint 4",
-    "latitude": 51.522464,
-    "longitude": -0.132501,
+    "latitude": 51.522456,
+    "longitude": -0.132409,
     "triggerRadius": 10,
     "navigationPrompt": "In 200 metres turn right into Woburn Square",
     "contextualPrompt": "In 50 metres cross Malet Street. You are entering the main UCL campus area, characterised by university buildings, shops and moderate pedestrian activity"
@@ -213,8 +213,8 @@
     "id": "a22",
     "order": 22,
     "name": "Waypoint 22",
-    "latitude": 51.527664,
-    "longitude": -0.133354,
+    "latitude": 51.527585,
+    "longitude": -0.133234,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right. Then In 100 metres, take the stairs",
     "contextualPrompt": "Turn right to head east, then in 100 metres, take the descending stairs to exit. You are passing the station entrances and commerce"

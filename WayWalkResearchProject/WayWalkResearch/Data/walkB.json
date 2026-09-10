@@ -193,8 +193,8 @@
     "id": "b20",
     "order": 20,
     "name": "Waypoint 20",
-    "latitude": 51.524489,
-    "longitude": -0.130465,
+    "latitude": 51.524442,
+    "longitude": -0.130441,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right into Gordon Square, then in 20 metres, turn left",
     "contextualPrompt": "Turn right to enter Gordon Square and follow the outer shoreline path on the left towards the south exit. The square is characterised by benches and open grass areas"
