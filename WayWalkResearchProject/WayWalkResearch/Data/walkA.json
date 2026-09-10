@@ -203,8 +203,8 @@
     "id": "a21",
     "order": 21,
     "name": "Waypoint 21",
-    "latitude": 51.526979,
-    "longitude": -0.13267,
+    "latitude": 51.527080,
+    "longitude": -0.132799,
     "triggerRadius": 10,
     "navigationPrompt": "In 100 metres turn right",
     "contextualPrompt": "In 100m turn right. This is one of London's principal railway and underground stations, dominated by a high level of pedestrian density. A taxi rank is located on the left."
