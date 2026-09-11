@@ -37,7 +37,7 @@
     "longitude": -0.130805,
     "triggerRadius": 10,
     "navigationPrompt": "Turn left and cross Eversholt Street, then turn right to continue.",
-    "contextualPrompt": "Turn left and cross Eversholt Street via the staggered crossing, then turn right and continue north."
+    "contextualPrompt": "Turn left and cross Eversholt Street, then turn right and continue north."
   },
   {
     "id": "b5",
@@ -63,8 +63,8 @@
     "id": "b7",
     "order": 7,
     "name": "Waypoint 7",
-    "latitude": 51.528264,
-    "longitude": -0.131932,
+    "latitude": 51.528367,
+    "longitude": -0.132026,
     "triggerRadius": 10,
     "navigationPrompt": "Take the stairs on the left",
     "contextualPrompt": "Take the ascending stairs on the left to enter Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
@@ -83,11 +83,11 @@
     "id": "b9",
     "order": 9,
     "name": "Waypoint 9",
-    "latitude": 51.527664,
-    "longitude": -0.133351,
+    "latitude": 51.527585,
+    "longitude": -0.133234,
     "triggerRadius": 10,
     "navigationPrompt": "Turn left onto the path and continue for 100 metres",
-    "contextualPrompt": "Turn left then take the south path for 100 metres that connects onto Euston Road."
+    "contextualPrompt": "Turn left and continue for 100 metres along the south path that connects to Euston Road."
   },
   {
     "id": "b10",
@@ -127,7 +127,7 @@
     "longitude": -0.133866,
     "triggerRadius": 10,
     "navigationPrompt": "Turn left and cross Euston Road. Then continue straight onto Gordon Street for 200 metres.",
-    "contextualPrompt": "Turn left and cross Euston Road"
+    "contextualPrompt": "Turn left and cross Euston Road. This is an unsignalled crossing with four lanes of traffic."
   },
   {
     "id": "b14",
@@ -155,7 +155,7 @@
     "name": "Waypoint 16",
     "latitude": 51.524682,
     "longitude": -0.132067,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn left onto Gordon Square via the crossing",
     "contextualPrompt": "Turn left onto Gordon Square via the zebra crossing"
   },
@@ -187,7 +187,7 @@
     "longitude": -0.130935,
     "triggerRadius": 10,
     "navigationPrompt": "In 60 metres, turn right into Gordon Square",
-    "contextualPrompt": "In 60 metres, turn right into Gordon Square"
+    "contextualPrompt": "In 60 metres, turn right to enter Gordon Square"
   },
   {
     "id": "b20",
@@ -227,7 +227,7 @@
     "longitude": -0.130093,
     "triggerRadius": 10,
     "navigationPrompt": "Enter Woburn Square, then In 80 metres continue around the square and return to the entrance.",
-    "contextualPrompt": "Enter Woburn Square then follow the path straight ahead for 80 metres, where it leads back to the entrance. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
+    "contextualPrompt": "Enter Woburn Square then follow the path for 80 metres. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
   },
   {
     "id": "b24",
@@ -247,7 +247,7 @@
     "longitude": -0.129881,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right to exit Woburn Square, then turn left onto Woburn Square",
-    "contextualPrompt": "Turn right to exit Woburn Square, then turn left and head west into Byng Place"
+    "contextualPrompt": "In 10 metres turn right to exit Woburn Square, then turn left and head west into Byng Place"
   },
   {
     "id": "b26",
@@ -257,7 +257,7 @@
     "longitude": -0.130404,
     "triggerRadius": 10,
     "navigationPrompt": "Continue straight for 200 metres through Byng Place.",
-    "contextualPrompt": "Head west for 150 metres through Byng Place. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
+    "contextualPrompt": "Head west for 150 metres through Byng Place. Up ahead is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
   },
   {
     "id": "b27",
@@ -277,7 +277,7 @@
     "longitude": -0.132517,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right onto Gower Street, then in 250 metres the destination is on your right. University College London.",
-    "contextualPrompt": "Turn right to head north on Gower Street then In 250 metres, the destination is on your right, University College London. This crossing is intersected by cycleways on either side."
+    "contextualPrompt": "Turn right to head north on Gower Street."
   },
   {
     "id": "b29",
@@ -285,7 +285,7 @@
     "name": "Waypoint 29",
     "latitude": 51.522535,
     "longitude": -0.132573,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "",
     "contextualPrompt": "In 250 metres, the destination is on your right, University College London."
   },

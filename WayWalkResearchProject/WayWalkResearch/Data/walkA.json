@@ -47,7 +47,7 @@
     "longitude": -0.131772,
     "triggerRadius": 10,
     "navigationPrompt": "Cross Malet Street then continue on Byng Place for 150 metres",
-    "contextualPrompt": "Cross Malet Street and continue into Byng Place for 150 metres. This is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
+    "contextualPrompt": "Cross Malet Street and continue into Byng Place for 150 metres. Up ahead is a shared space where pedestrians and cyclists use the same area with fewer conventional street boundaries"
   },
   {
     "id": "a6",
@@ -263,9 +263,9 @@
     "id": "a27",
     "order": 27,
     "name": "Waypoint 27",
-    "latitude": 51.527212,
-    "longitude": -0.130780,
-    "triggerRadius": 10,
+    "latitude": 51.527169,
+    "longitude": -0.130824,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn left and cross Upper Woburn Place, then turn right to continue",
     "contextualPrompt": "Turn left and cross Upper Woburn Place, then turn right to continue"
   },
@@ -283,8 +283,8 @@
     "id": "a29",
     "order": 29,
     "name": "Waypoint 29",
-    "latitude": 51.526798,
-    "longitude": -0.130066,
+    "latitude": 51.526723,
+    "longitude": -0.129974,
     "triggerRadius": 10,
     "navigationPrompt": "Arrived",
     "contextualPrompt": "The destination is on your left. Central House. Enter via the ascending steps and locate the large circular entrance button on your right. Arrived"
