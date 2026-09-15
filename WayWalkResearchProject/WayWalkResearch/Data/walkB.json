@@ -56,7 +56,7 @@
     "latitude": 51.527801,
     "longitude": -0.131409,
     "triggerRadius": 10,
-    "navigationPrompt": "Cross Euston Square then continue straight for 50 metres",
+    "navigationPrompt": "Cross Euston Square and continue straight for 50 metres, then take the stairs on the left",
     "contextualPrompt": "Cross the Euston Square bus loop on the left via the signalled crossing, then continue for 50 metres and take the ascending stairs on the left"
   },
   {
@@ -113,10 +113,10 @@
     "id": "b12",
     "order": 12,
     "name": "Waypoint 12",
-    "latitude": 51.526465,
-    "longitude": -0.133665,
+    "latitude": 51.526522,
+    "longitude": -0.133605,
     "triggerRadius": 10,
-    "navigationPrompt": "Cross over Melton Street then turn left and cross Euston Road. Then continue straight onto Gordon Street.",
+    "navigationPrompt": "Cross over Melton Street then turn left and cross Euston Road.",
     "contextualPrompt": "Cross Melton Street ahead and then turn left to cross Euston Road. The Melton Street crossing is staggered and signalled. The Euston Road crossing is unsignalled"
   },
   {
@@ -146,7 +146,7 @@
     "latitude": 51.525897,
     "longitude": -0.133276,
     "triggerRadius": 10,
-    "navigationPrompt": "Cross Gower Place and continue south for 150 metres.",
+    "navigationPrompt": "Cross Gower Place and continue straight for 150 metres.",
     "contextualPrompt": "Cross Gower Place and continue south for 150 metres. One-way traffic approaches from the left"
   },
   {
@@ -226,7 +226,7 @@
     "latitude": 51.523656,
     "longitude": -0.130093,
     "triggerRadius": 10,
-    "navigationPrompt": "Enter Woburn Square, then In 80 metres continue around the square and return to the entrance.",
+    "navigationPrompt": "Enter Woburn Square, then continue straight for 80 metres.",
     "contextualPrompt": "Enter Woburn Square then follow the path for 80 metres. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
   },
   {
@@ -236,7 +236,7 @@
     "latitude": 51.522993,
     "longitude": -0.129321,
     "triggerRadius": 10,
-    "navigationPrompt": "Follow the path to continue around the square heading back north to return to the entrance.",
+    "navigationPrompt": "Follow the path to continue around the square and return to the entrance.",
     "contextualPrompt": "Follow the path to continue around the square heading back north to return to the entrance."
   },
   {
@@ -277,7 +277,7 @@
     "longitude": -0.132517,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right onto Gower Street, then in 250 metres the destination is on your right. University College London.",
-    "contextualPrompt": "Turn right to head north on Gower Street."
+    "contextualPrompt": "Turn right to head north on Gower Street. This crossing is intersected by cycleways on either side."
   },
   {
     "id": "b29",
