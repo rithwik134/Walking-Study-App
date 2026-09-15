@@ -40,7 +40,7 @@ struct Waypoint: Codable, Identifiable, Equatable {
     /// Empty or absent means **this waypoint is not on the Navigation +
     /// Context route** — see `script(for:)`. It does *not* fall back to the
     /// navigation prompt.
-    let contextualPrompt: String?
+    let contextualPrompt: String
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
