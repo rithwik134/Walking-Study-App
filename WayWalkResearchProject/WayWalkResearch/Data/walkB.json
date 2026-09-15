@@ -33,8 +33,8 @@
     "id": "b4",
     "order": 4,
     "name": "Waypoint 4",
-    "latitude": 51.527422,
-    "longitude": -0.130805,
+    "latitude": 51.527460,
+    "longitude": -0.130786,
     "triggerRadius": 10,
     "navigationPrompt": "Turn left and cross Eversholt Street, then turn right to continue.",
     "contextualPrompt": "Turn left and cross Eversholt Street, then turn right and continue north."
@@ -85,7 +85,7 @@
     "name": "Waypoint 9",
     "latitude": 51.527585,
     "longitude": -0.133234,
-    "triggerRadius": 10,
+    "triggerRadius": 17,
     "navigationPrompt": "Turn left onto the path and continue for 100 metres",
     "contextualPrompt": "Turn left and continue for 100 metres along the south path that connects to Euston Road."
   },
@@ -173,8 +173,8 @@
     "id": "b18",
     "order": 18,
     "name": "Waypoint 18",
-    "latitude": 51.524979,
-    "longitude": -0.131066,
+    "latitude": 51.524947,
+    "longitude": -0.131107,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right onto Gordon Square",
     "contextualPrompt": "Turn right to continue south along Gordon Square. A cycleway intersects the corner and the proceeding pavement is narrow."

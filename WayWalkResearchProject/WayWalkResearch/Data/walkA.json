@@ -73,8 +73,8 @@
     "id": "a8",
     "order": 8,
     "name": "Waypoint 8",
-    "latitude": 51.523696,
-    "longitude": -0.129913,
+    "latitude": 51.523639,
+    "longitude": -0.129892,
     "triggerRadius": 10,
     "navigationPrompt": "In 10 metres, turn right to exit Woburn Square. Then cross the road ahead using the crossing to enter Gordon Square",
     "contextualPrompt": "In 10 metres, turn right to exit Woburn Square. Then cross the road ahead to enter Gordon Square using the zebra crossing. The crossing is intersected by cycleways on either side"
@@ -215,7 +215,7 @@
     "name": "Waypoint 22",
     "latitude": 51.527585,
     "longitude": -0.133234,
-    "triggerRadius": 10,
+    "triggerRadius": 17,
     "navigationPrompt": "Turn right. Then In 100 metres, take the stairs",
     "contextualPrompt": "Turn right to head east, then in 100 metres, take the descending stairs to exit. You are passing the station entrances and commerce"
   },
@@ -223,8 +223,8 @@
     "id": "a23",
     "order": 23,
     "name": "Waypoint 23",
-    "latitude": 51.528195,
-    "longitude": -0.132217,
+    "latitude": 51.528331,
+    "longitude": -0.131977,
     "triggerRadius": 10,
     "navigationPrompt": "Take the stairs",
     "contextualPrompt": "Take the descending stairs to Eversholt Street"
@@ -275,7 +275,7 @@
     "name": "Waypoint 28",
     "latitude": 51.527242,
     "longitude": -0.130508,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right and continue on Upper Woburn Place for 60 metres, where the destination is on your left. Central House.",
     "contextualPrompt": "Turn right and continue south on Upper Woburn Place for 60 metres, where the destination is on your left. St Pancras New Church is located on your left. The church is a prominent historic landmark in this part of Bloomsbury."
   },
