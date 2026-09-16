@@ -18,28 +18,112 @@ enum WalkBanner: Equatable {
     case ended
 }
 
-/// Drives one walk: monitors a geofence for exactly one waypoint at a time,
-/// plays the correct prompt exactly once when entered, and never repeats a
-/// waypoint unless the walk is restarted. Waypoints are handled strictly in
-/// sequence — the region for waypoint N+1 is not registered with
-/// CLLocationManager until waypoint N has fired — so it is not possible for
-/// two regions to compete or for GPS drift near one waypoint to be
-/// misread as arrival at another.
+/// Tunable thresholds for the two-stage trigger. Grouped into one injectable
+/// value rather than scattered `private let`s so tests can vary them, and so
+/// the numbers that must be calibrated on a real device walk are visible in
+/// one place.
 ///
-/// Entering a waypoint's radius does not fire its prompt immediately —
-/// arrival must be held continuously for `confirmationDwellTime` first
-/// (trigger confirmation). If CoreLocation reports the participant has
-/// genuinely left the radius before that window elapses (via didExitRegion,
-/// not a raw distance comparison — ordinary GPS noise is too unreliable for
-/// that at small radii), the confirmation is cancelled and nothing plays.
+/// `wakeRadius` deliberately does **not** come from the route JSON.
+/// `Waypoint.triggerRadius` is the distance at which a prompt fires; the
+/// CoreLocation region is a separate, much coarser thing, and conflating them
+/// is what this design exists to undo.
+struct TriggerTuning {
+    /// Radius of the `CLCircularRegion`. Coarse on purpose — its only job is
+    /// to wake the app (and relaunch it if iOS suspended it) before the
+    /// participant is close. Entering it fires nothing.
+    var wakeRadius: CLLocationDistance = 100
+
+    /// Worst horizontal accuracy a fix may have and still be allowed to fire a
+    /// prompt. Deliberately tighter than `closestApproachAccuracyLimit` (50m):
+    /// a fix whose own error bar is ±50m claiming "you are 8m away" is not
+    /// evidence of being within 10m, and believing it would recreate the early
+    /// firing this design removes.
+    ///
+    /// **The riskiest number here.** If accuracy on the route is routinely
+    /// worse than this, the fine trigger starves and every waypoint falls
+    /// through to a backstop, firing late — worse than the old behaviour.
+    /// `gps_accuracy_m` in the CSV and the debug panel exist to measure it.
+    var triggerAccuracyLimit: CLLocationAccuracy = 25
+
+    /// Consecutive qualifying fixes inside the radius before the prompt plays.
+    /// Replaces the old wall-clock dwell; see the class doc.
+    var confirmingFixCount = 2
+
+    /// Backstop B: how close the participant must have got for a "they passed
+    /// it" inference to be credible at all.
+    var backstopApproachDistance: CLLocationDistance = 30
+    /// Backstop B: how far past their closest approach they must then travel.
+    var backstopRecedeDistance: CLLocationDistance = 50
+    /// Backstop B can be switched off for early device walks without touching
+    /// backstop A, which is the more conservative of the two.
+    var isRecedeBackstopEnabled = true
+}
+
+/// One GPS fix, captured as a unit.
 ///
-/// Uses CLLocationManager region monitoring (not continuous distance
-/// polling) because region monitoring is designed by Apple to keep working —
-/// and to relaunch the app briefly if needed — while the phone is locked or
-/// the app is backgrounded, which continuous GPS polling from a suspended
-/// app cannot do reliably. Continuous location updates are also requested,
-/// in parallel, but purely to feed the debug / test-mode readouts — they no
-/// longer make any triggering or cancellation decisions.
+/// The position, its accuracy and the time it was *measured* have to travel
+/// together: a row that logs coordinates from one fix and a timestamp from
+/// another is worse than one that logs neither. Keeping them in a single
+/// assignment makes that divergence structurally impossible.
+struct FixSnapshot: Equatable {
+    let latitude: Double
+    let longitude: Double
+    let horizontalAccuracy: CLLocationAccuracy
+    /// `CLLocation.timestamp` — when the hardware took the reading, which
+    /// under iOS's batching can be well before the app was handed it.
+    let timestamp: Date
+
+    init(_ location: CLLocation) {
+        latitude = location.coordinate.latitude
+        longitude = location.coordinate.longitude
+        horizontalAccuracy = location.horizontalAccuracy
+        timestamp = location.timestamp
+    }
+}
+
+/// Drives one walk: plays each waypoint's prompt exactly once, in sequence,
+/// and never repeats one unless the walk is restarted. Waypoints are handled
+/// strictly in order — waypoint N+1 is not armed until N has fired — so two
+/// waypoints can never compete.
+///
+/// **Triggering is two-stage, and the split is the whole design.**
+///
+/// 1. **Wake-up (coarse).** A single `CLCircularRegion` of
+///    `tuning.wakeRadius` (~100m) is monitored. Entering it fires *nothing*.
+///    Its only job is to guarantee the app is awake — region monitoring is
+///    what Apple supports for relaunching a suspended app while the phone is
+///    locked, which continuous GPS polling cannot do.
+/// 2. **Fire (fine).** The prompt plays when `tuning.confirmingFixCount`
+///    consecutive location fixes, each accurate to within
+///    `tuning.triggerAccuracyLimit`, put the participant inside the
+///    waypoint's real `triggerRadius`.
+///
+/// This inverts an earlier design in which region entry *was* the trigger.
+/// Real-device measurements (Shevchenko & Reips 2023, *Behavior Research
+/// Methods* 56:6411) found iOS clamps small geofences upward — 10m fences
+/// fired 75-183m out, with no differentiation between 10m, 50m and 100m. With
+/// waypoints a median ~50m apart, that did not merely fire early: waypoint N
+/// fired, N+1 was armed, the arm-time `requestState` immediately answered
+/// "inside" because N+1 was well within the clamp, and the route chain-fired
+/// several prompts at a participant standing still. `handleWakeEntry` no
+/// longer delivering anything is what closes that off.
+///
+/// **Why a run of fixes rather than a wall-clock dwell.** The old design held
+/// arrival for 2 seconds before playing. iOS coalesces fixes while locked, so
+/// a batch arrives having been measured seconds ago; adding wall-clock delay
+/// on top only makes an already-late prompt later. A run of consecutive fixes
+/// costs nothing when they arrive in one batch. Note the distinction from the
+/// bug this replaced: raw distance must never cancel a *timer* (a single noisy
+/// fix would kill every confirmation), but here there is no timer — a fix
+/// outside the radius resets a run that the same stream has to re-earn, which
+/// is symmetric.
+///
+/// **Backstops.** A waypoint that never fires blocks the entire rest of the
+/// walk, so two independent inferences of "they have passed it" exist:
+/// leaving the wake region (works when GPS is too poor to fire but cell/wifi
+/// positioning still reports region state), and receding well past a close
+/// approach (works when the participant was never inside the wake region, so
+/// no exit event will ever arrive). Both are marked in the CSV `note` column.
 @MainActor
 final class WalkSession: NSObject, ObservableObject {
     @Published var isActive = false
@@ -47,19 +131,42 @@ final class WalkSession: NSObject, ObservableObject {
     /// Nil for most of a walk — see `WalkBanner`.
     @Published private(set) var banner: WalkBanner?
 
+    /// The waypoint whose prompt is audible *now* — the front of
+    /// `speakingQueue`, i.e. exactly the fact the banner names, as an id the
+    /// walk screens can select on the map. Nil whenever nothing is speaking.
+    ///
+    /// Needed because `currentWaypointNumber` has already advanced to the next
+    /// armed waypoint by the time the first syllable is heard (`deliverPrompt`
+    /// arms N+1 synchronously), so a preview card following it would show the
+    /// participant one script while playing another.
+    @Published private(set) var nowPlayingWaypointID: String?
+
     @Published var lastTriggeredWaypointName: String?
     @Published private(set) var triggeredWaypointIDs: Set<String> = []
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
 
-    // Debug / test-mode readouts. Purely observational — none of these feed
-    // back into triggering logic.
-    @Published private(set) var currentAccuracy: CLLocationAccuracy?
-    @Published private(set) var currentLatitude: Double?
-    @Published private(set) var currentLongitude: Double?
+    /// The most recent fix, whatever its quality — position, accuracy and
+    /// measurement time as one unit. Updated from every delivered fix, *not*
+    /// accuracy-gated like `lastUsableFix`, so `gps_accuracy_m` keeps meaning
+    /// "how good was the fix these coordinates came from".
+    @Published private(set) var currentFix: FixSnapshot?
+
+    // Live readouts derived from the snapshot, so position, accuracy and fix
+    // time can never disagree about which fix they came from.
+    var currentLatitude: Double? { currentFix?.latitude }
+    var currentLongitude: Double? { currentFix?.longitude }
+    var currentAccuracy: CLLocationAccuracy? { currentFix?.horizontalAccuracy }
+
+    // Debug / test-mode readouts.
     @Published private(set) var distanceToNext: CLLocationDistance?
     @Published private(set) var isNextWaypointArmed = false
     @Published private(set) var isConfirmingArrival = false
     @Published private(set) var currentWaypointNumber = 0
+
+    /// Whether the participant has been reported inside the coarse wake region
+    /// for the armed waypoint. Surfaced in the debug panel, and the precondition
+    /// for backstop A — you cannot have passed what you never reached.
+    @Published private(set) var hasEnteredWakeRegion = false
 
     /// Which condition this walk is running. Published so the researcher
     /// screens can show the participant exactly the script that will be
@@ -76,9 +183,16 @@ final class WalkSession: NSObject, ObservableObject {
     /// view deriving completion from it would never see the route end.
     @Published private(set) var routeIsComplete = false
 
-    /// Manual mode only: whether the participant is currently inside the armed
-    /// waypoint's trigger radius. Drives the cue button's colour — it is a
+    /// Whether the most recent usable fix put the participant inside the armed
+    /// waypoint's `triggerRadius`. Drives Manual Mode's cue button colour — a
     /// hint about *when* to play, never a gate on being able to.
+    ///
+    /// Tracks the latest qualifying fix rather than the confirmed run, so it
+    /// lights as soon as there is evidence rather than waiting for the
+    /// automatic path. It will therefore flicker at the boundary, and it now
+    /// lights at `triggerRadius` (~10m) rather than at CoreLocation's much
+    /// coarser region entry — much less warning than before, but honest, and
+    /// it finally matches the circle the maps draw to true scale.
     @Published private(set) var isInsideCurrentRadius = false
 
     // MARK: - Session logging
@@ -100,12 +214,20 @@ final class WalkSession: NSObject, ObservableObject {
     /// start arriving again.
     @Published private(set) var locationError: String?
 
-    /// Waypoint names whose prompts are queued or being spoken, in the order
-    /// the synthesiser will speak them. The front is what is audible *now*,
-    /// which is what the banner must show — where waypoints are close enough
-    /// to fire seconds apart, the most recently triggered one is not the one
-    /// the participant is currently hearing.
-    private var speakingQueue: [String] = []
+    /// One queued or speaking prompt. The name is what the banner reads out;
+    /// the id is what the maps select on. Both are carried so the two can
+    /// never describe different waypoints.
+    private struct SpokenPrompt {
+        let waypointID: String
+        let waypointName: String
+    }
+
+    /// Prompts queued or being spoken, in the order the player will speak
+    /// them. The front is what is audible *now*, which is what the banner and
+    /// `nowPlayingWaypointID` must show — where waypoints are close enough to
+    /// fire seconds apart, the most recently triggered one is not the one the
+    /// participant is currently hearing.
+    private var speakingQueue: [SpokenPrompt] = []
 
     /// Smallest distance to the armed waypoint seen since it was armed, in
     /// metres. Reset every time a new waypoint is armed.
@@ -140,43 +262,51 @@ final class WalkSession: NSObject, ObservableObject {
     /// The single region currently being monitored — there is never more than one.
     private var currentRegion: CLCircularRegion?
 
-    /// How long a participant must remain continuously inside a waypoint's
-    /// radius before its prompt plays (trigger confirmation).
-    private let confirmationDwellTime: TimeInterval = 2.0
-    /// The waypoint ID currently being confirmed, if any.
-    private var pendingWaypointID: String?
-    /// The in-flight dwell-timer task, cancelled if the participant leaves
-    /// the radius early.
-    private var confirmationTask: Task<Void, Never>?
+    /// Consecutive qualifying fixes so far inside the armed waypoint's radius.
+    /// Reaching `tuning.confirmingFixCount` fires the prompt.
+    private var inRadiusRun = 0
+    /// Consecutive qualifying fixes so far satisfying backstop B's recede test.
+    private var recedeRun = 0
 
     /// How often to re-ask CoreLocation whether the participant is inside the
-    /// armed waypoint's region.
+    /// armed waypoint's wake region.
     ///
-    /// `didEnterRegion` only fires on a genuine outside→inside transition, and
-    /// `requestState` used to be called once, at arm time. If a dwell was
-    /// cancelled by a jittery `didExitRegion` — routine at the radii this
-    /// route uses — and CoreLocation's state then settled back to "inside"
-    /// without another transition, no further event ever arrived and the walk
-    /// stopped dead at that waypoint. Re-asking periodically costs almost
-    /// nothing next to the continuous location updates already running, and
-    /// converts a permanent stall into a few seconds' delay.
+    /// `didEnterRegion` only fires on a genuine outside→inside transition, so
+    /// a transition that never arrives would otherwise leave
+    /// `hasEnteredWakeRegion` false forever and disable backstop A. Now that
+    /// region state only feeds the backstop rather than the trigger, this is
+    /// no longer load-bearing — the interval could be relaxed to reduce
+    /// wake-ups if battery ever matters more than backstop latency.
     private let stateRecheckInterval: TimeInterval = 5.0
     private var stateRecheckTask: Task<Void, Never>?
+
+    /// Why a backstop fired, for the CSV `note`.
+    private enum BackstopReason: String {
+        /// Left the coarse wake region without ever confirming arrival.
+        case wakeExit = "wake_exit"
+        /// Came close, then travelled well past without ever confirming.
+        case receded
+
+        var note: String { "backstop: \(rawValue)" }
+    }
 
     // There is deliberately no cross-waypoint trigger debounce. An earlier
     // version ignored any confirmed arrival within 4s of the previous one,
     // which was both redundant and actively harmful: `triggeredWaypointIDs`
-    // already guarantees a waypoint fires at most once, and because the dwell
-    // (2s) is always shorter than that window was (4s), any waypoint the
+    // already guarantees a waypoint fires at most once, and any waypoint the
     // participant was already standing inside when it was armed could never
     // satisfy it — wedging that waypoint and every waypoint after it.
 
+    let tuning: TriggerTuning
+
     init(
         audioPlayer: AudioPromptPlaying = SpeechPromptPlayer(),
-        locationManager: LocationProviding = CLLocationManager()
+        locationManager: LocationProviding = CLLocationManager(),
+        tuning: TriggerTuning = TriggerTuning()
     ) {
         self.audioPlayer = audioPlayer
         self.locationManager = locationManager
+        self.tuning = tuning
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
@@ -210,9 +340,10 @@ final class WalkSession: NSObject, ObservableObject {
         lastSessionFileURL = nil
         banner = nil
         speakingQueue.removeAll()
+        nowPlayingWaypointID = nil
         routeIsComplete = false
         closestApproachToArmed = nil
-        cancelConfirmation()
+        clearConfirmationProgress()
         isActive = true
 
         let logger = SessionLogger(
@@ -236,10 +367,12 @@ final class WalkSession: NSObject, ObservableObject {
     func end() {
         isActive = false
         speakingQueue.removeAll()
+        // Explicitly, because `audioPlayer.stop()` below drops the pending
+        // completions that would otherwise have cleared this.
+        nowPlayingWaypointID = nil
         banner = .ended
         isNextWaypointArmed = false
-        isInsideCurrentRadius = false
-        cancelConfirmation()
+        clearConfirmationProgress()
         cancelStateRecheck()
 
         if let logger {
@@ -274,7 +407,8 @@ final class WalkSession: NSObject, ObservableObject {
             timestamp: now,
             latitude: currentLatitude,
             longitude: currentLongitude,
-            horizontalAccuracy: currentAccuracy
+            horizontalAccuracy: currentAccuracy,
+            fixTimestamp: currentFix?.timestamp
         )
         lastFlagTime = now
         lastFlagEventID = id
@@ -308,20 +442,37 @@ final class WalkSession: NSObject, ObservableObject {
         }
     }
 
-    /// Registers a geofence for exactly the next un-triggered waypoint. Only
-    /// one region is ever monitored at once — the previous one (if any) is
-    /// stopped first — which is what makes cross-waypoint misfires impossible.
+    /// Registers the coarse wake region for exactly the next un-triggered
+    /// waypoint. Only one region is ever monitored at once — the previous one
+    /// (if any) is stopped first — which is what makes cross-waypoint
+    /// misfires impossible.
     private func armNextWaypoint() {
-        cancelConfirmation()
+        clearConfirmationProgress()
         cancelStateRecheck()
-        // A new waypoint has not been arrived at yet, whatever was true of the
+        // A new waypoint has not been approached yet, whatever was true of the
         // last one.
-        isInsideCurrentRadius = false
+        hasEnteredWakeRegion = false
         closestApproachToArmed = nil
 
         if let currentRegion {
             locationManager.stopMonitoring(for: currentRegion)
             self.currentRegion = nil
+        }
+
+        // Skip waypoints that carry no script for the running condition: they
+        // are not on this condition's route. The two Gordon Square branches are
+        // encoded exactly this way, and arming one of them stalls the walk —
+        // the other branch's waypoint sits ~33m away, so no fix ever lands
+        // inside its 10m radius, and the recede backstop cannot rescue it
+        // either because the seeded closest approach already exceeds
+        // `backstopApproachDistance`. Everything after it would be blocked.
+        //
+        // Skipped waypoints are never armed, never spoken and never logged. A
+        // CSV row for a prompt that was never played records a queue advance,
+        // not an arrival, and would be read as one by the analyser.
+        while currentIndex < walkQueue.count,
+              !walkQueue[currentIndex].isOnRoute(for: informationLevel) {
+            currentIndex += 1
         }
 
         guard currentIndex < walkQueue.count else {
@@ -348,32 +499,42 @@ final class WalkSession: NSObject, ObservableObject {
             )
         }
 
+        // `tuning.wakeRadius`, NOT `waypoint.triggerRadius`. This region only
+        // wakes the app; the prompt fires from the fix stream in
+        // `evaluateTrigger`. Exit is still wanted — it is backstop A.
         let region = CLCircularRegion(
             center: waypoint.coordinate,
-            radius: waypoint.triggerRadius,
+            radius: tuning.wakeRadius,
             identifier: waypoint.id
         )
         region.notifyOnEntry = true
         region.notifyOnExit = true
         currentRegion = region
         locationManager.startMonitoring(for: region)
-        // Covers the case where the participant is already standing inside
-        // this waypoint's radius the moment it becomes active — didEnterRegion
-        // alone would never fire for that. Because only one region is ever
-        // armed, this can't cross-trigger a different waypoint. Entry here
-        // still goes through the same dwell-time confirmation as any other.
+        // Covers the participant already being inside the wake region when it
+        // becomes active — routine, since waypoints are a median ~50m apart and
+        // the region is 100m — which `didEnterRegion` would never report,
+        // having seen no transition. Harmless now: the reply only sets
+        // `hasEnteredWakeRegion`. Under the old design, where this reply
+        // *fired the prompt*, it was the chain-fire mechanism.
         locationManager.requestState(for: region)
-        // …and keep asking, so a transition that never arrives (or a dwell
-        // cancelled by GPS jitter) recovers instead of stalling the walk.
+        // …and keep asking, so a transition that never arrives still enables
+        // backstop A rather than leaving it disabled for the whole leg.
         startStateRecheck(for: region)
 
         isNextWaypointArmed = true
     }
 
-    /// Single funnel for both didEnterRegion and didDetermineState. Starts
-    /// (or ignores, if already running) the dwell-time confirmation — it does
-    /// not play anything itself.
-    private func handleCandidateArrival(regionIdentifier: String) {
+    /// Single funnel for `didEnterRegion` and `didDetermineState(.inside)`.
+    ///
+    /// **This must never deliver a prompt.** It records only that the
+    /// participant is somewhere within the coarse wake region, which enables
+    /// backstop A and tells the researcher's debug panel the app is tracking.
+    /// Firing here is exactly what chain-fired the route: iOS reports "inside"
+    /// from up to ~100m away, and with waypoints a median ~50m apart the reply
+    /// to the arm-time `requestState` arrived before the participant had moved
+    /// at all. The prompt now comes from `evaluateTrigger` instead.
+    private func handleWakeEntry(regionIdentifier: String) {
         guard isActive else { return }
         guard let currentRegion, currentRegion.identifier == regionIdentifier else {
             // Stray event for a region we're no longer monitoring — ignore.
@@ -384,21 +545,7 @@ final class WalkSession: NSObject, ObservableObject {
         guard waypoint.id == regionIdentifier else { return }
         guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
 
-        // Manual mode never plays on arrival. Arrival only lights the cue
-        // button; the researcher decides when the prompt is actually spoken.
-        // The arrival time is still recorded, so the log keeps both "when they
-        // reached it" and "when it was played".
-        if sessionMode == .manual {
-            isInsideCurrentRadius = true
-            return
-        }
-
-        // didEnterRegion and requestState's didDetermineState can both report
-        // the same arrival in quick succession — don't restart the timer if
-        // a confirmation for this exact waypoint is already counting down.
-        guard pendingWaypointID != waypoint.id else { return }
-
-        beginConfirmation(for: waypoint)
+        hasEnteredWakeRegion = true
     }
 
     /// Play the current waypoint's prompt now, without waiting for arrival.
@@ -428,59 +575,56 @@ final class WalkSession: NSObject, ObservableObject {
         deliverPrompt(for: waypoint, at: Date(), source: .manual)
     }
 
-    /// Cancels an in-progress dwell confirmation if CoreLocation reports the
-    /// participant has genuinely left the waypoint's radius before the
-    /// confirmation window completed. Only acts if this exit is for the
-    /// waypoint currently being confirmed — a stray exit event for a region
-    /// we've already moved past is ignored.
-    private func handleExit(regionIdentifier: String) {
-        if sessionMode == .manual {
-            guard currentRegion?.identifier == regionIdentifier else { return }
-            isInsideCurrentRadius = false
-            return
-        }
-        guard pendingWaypointID == regionIdentifier else { return }
-        cancelConfirmation()
-    }
-
-    private func beginConfirmation(for waypoint: Waypoint) {
-        confirmationTask?.cancel()
-        pendingWaypointID = waypoint.id
-        isConfirmingArrival = true
-
-        confirmationTask = Task { [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(for: .seconds(self.confirmationDwellTime))
-            guard !Task.isCancelled else { return }
-            self.confirmArrival(waypointID: waypoint.id)
-        }
-    }
-
-    /// Cancels any in-flight dwell confirmation — called when the participant
-    /// drifts back outside the radius before the dwell time completes, and
-    /// defensively whenever a walk starts, ends, or advances to the next
-    /// waypoint.
-    private func cancelConfirmation() {
-        confirmationTask?.cancel()
-        confirmationTask = nil
-        clearPendingConfirmation()
-    }
-
-    /// Drops the in-flight confirmation state, making the waypoint eligible to
-    /// be confirmed again. Every early return in `confirmArrival` goes through
-    /// here — leaving `pendingWaypointID` set is what wedged the walk.
-    private func clearPendingConfirmation() {
-        pendingWaypointID = nil
-        isConfirmingArrival = false
-    }
-
-    /// Periodically re-asks CoreLocation whether we are inside the armed
-    /// region, so a missed or cancelled transition recovers on its own.
+    /// Backstop A. Leaving a ~100m region without ever having confirmed
+    /// arrival means the participant has definitively passed this waypoint, so
+    /// fire it rather than let it block the rest of the walk.
     ///
-    /// This uses CoreLocation's own filtered geofence state — the same source
-    /// as `didEnterRegion` — rather than comparing raw GPS distance, so it
-    /// cannot make prompts fire earlier than they otherwise would. It only
-    /// recovers arrivals that would have been missed entirely.
+    /// This is the backstop that survives poor GPS: region state comes from
+    /// CoreLocation's own filtered positioning, which keeps working on cell
+    /// and wifi alone in exactly the conditions where no fix is accurate
+    /// enough for `evaluateTrigger` to fire.
+    private func handleWakeExit(regionIdentifier: String) {
+        // Manual mode never plays on its own — that is the entire contract of
+        // the mode.
+        guard isActive, sessionMode != .manual else { return }
+        guard currentRegion?.identifier == regionIdentifier else { return }
+        // You cannot have passed what you never reached. Guards against an
+        // exit for a waypoint approached from outside and never entered.
+        guard hasEnteredWakeRegion else { return }
+        guard currentIndex < walkQueue.count,
+              walkQueue[currentIndex].id == regionIdentifier,
+              !triggeredWaypointIDs.contains(regionIdentifier)
+        else { return }
+
+        fireBackstop(reason: .wakeExit)
+    }
+
+    /// Drops all in-flight confirmation progress, making the armed waypoint
+    /// eligible to be confirmed from scratch.
+    ///
+    /// The predecessor of this method cleared a `pendingWaypointID` that
+    /// `handleCandidateArrival` read as "a confirmation is already counting
+    /// down"; leaving it set silently discarded every future arrival for that
+    /// waypoint and — because the next waypoint is only armed after this one
+    /// fires — killed the rest of the walk. That property is gone: with a run
+    /// of fixes rather than a timer there is no restart to suppress, and
+    /// `triggeredWaypointIDs` already guarantees a waypoint fires at most
+    /// once. The invariant is discharged rather than maintained, but the
+    /// hazard it guarded against is worth remembering before adding state
+    /// here that a trigger path reads as "already in progress".
+    private func clearConfirmationProgress() {
+        inRadiusRun = 0
+        recedeRun = 0
+        isConfirmingArrival = false
+        isInsideCurrentRadius = false
+    }
+
+    /// Periodically re-asks CoreLocation whether we are inside the armed wake
+    /// region, so a transition that never arrives still enables backstop A.
+    ///
+    /// Stops asking once the answer is known — unlike the old design, where
+    /// this drove the trigger itself and so had to keep polling for the whole
+    /// leg, the answer here is a latch.
     private func startStateRecheck(for region: CLCircularRegion) {
         stateRecheckTask?.cancel()
         let interval = stateRecheckInterval
@@ -490,13 +634,10 @@ final class WalkSession: NSObject, ObservableObject {
                 guard !Task.isCancelled, let self else { return }
                 guard self.isActive,
                       self.currentRegion?.identifier == region.identifier,
-                      !self.triggeredWaypointIDs.contains(region.identifier)
+                      !self.triggeredWaypointIDs.contains(region.identifier),
+                      !self.hasEnteredWakeRegion
                 else { return }
-                // A confirmation for this waypoint is already counting down;
-                // asking again would only be discarded.
-                if self.pendingWaypointID != region.identifier {
-                    self.locationManager.requestState(for: region)
-                }
+                self.locationManager.requestState(for: region)
             }
         }
     }
@@ -506,58 +647,129 @@ final class WalkSession: NSObject, ObservableObject {
         stateRecheckTask = nil
     }
 
-    /// Called once the dwell timer completes without being cancelled. This is
-    /// the only place a prompt actually plays.
+    /// The fine trigger: decides, from one location fix, whether the armed
+    /// waypoint's prompt is now due. This and `playCurrentWaypoint` are the
+    /// only paths that deliver a prompt.
     ///
-    /// Every exit path from here must leave `pendingWaypointID` clear.
-    /// `handleCandidateArrival` reads a non-nil `pendingWaypointID` as "a
-    /// confirmation for this waypoint is already counting down" and discards
-    /// the event — so returning early while it is still set silently discards
-    /// every future arrival for that waypoint, and because the next waypoint
-    /// is only armed at the bottom of this method, kills the rest of the walk.
-    private func confirmArrival(waypointID: String) {
-        // The one case that must not clear the pending state: it belongs to a
-        // different waypoint, so it is not ours to touch.
-        guard pendingWaypointID == waypointID else { return }
+    /// Called once per fix, in order, including for every fix in a coalesced
+    /// batch — a batch delivered after a locked-screen gap may contain the
+    /// entire approach, and dropping all but the last would skip the arrival.
+    private func evaluateTrigger(with fix: CLLocation) {
+        guard isActive, currentIndex < walkQueue.count else { return }
+        let waypoint = walkQueue[currentIndex]
+        guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
+        guard fix.horizontalAccuracy > 0 else { return }
 
-        guard isActive,
-              currentIndex < walkQueue.count,
-              walkQueue[currentIndex].id == waypointID,
-              !triggeredWaypointIDs.contains(waypointID)
-        else {
-            clearPendingConfirmation()
-            return
+        let target = CLLocation(latitude: waypoint.latitude, longitude: waypoint.longitude)
+        let distance = fix.distance(from: target)
+
+        // The two decisions below need different qualities of evidence, and
+        // gating both on the tighter limit made the backstop unreachable in
+        // exactly the conditions it exists for. A simulated walk with every
+        // fix at ±40m accuracy fired *nothing at all* — the fine trigger
+        // rightly refused, and the backstop never got the chance to.
+
+        // Fine trigger: claiming "you are within 10m" demands a fix whose own
+        // error bar is smaller than the claim. A fix too imprecise to believe
+        // is not evidence in *either* direction, so it must neither confirm
+        // arrival nor break a run built from good fixes — hence leaving the
+        // runs untouched rather than resetting them.
+        if fix.horizontalAccuracy <= tuning.triggerAccuracyLimit {
+            if distance <= waypoint.triggerRadius {
+                isInsideCurrentRadius = true
+                inRadiusRun += 1
+                recedeRun = 0
+            } else {
+                isInsideCurrentRadius = false
+                inRadiusRun = 0
+            }
+            isConfirmingArrival = inRadiusRun > 0
+
+            // Manual mode takes the hint but never the action: the flags above
+            // colour the cue button, and the researcher decides when to play.
+            guard sessionMode != .manual else { return }
+
+            if inRadiusRun >= tuning.confirmingFixCount {
+                deliverPrompt(for: waypoint, at: Date(), source: .automatic)
+                return
+            }
         }
 
-        let waypoint = walkQueue[currentIndex]
-        let firedAt = Date()
+        guard sessionMode != .manual else { return }
 
-        clearPendingConfirmation()
-        confirmationTask = nil
-        deliverPrompt(for: waypoint, at: firedAt, source: .automatic)
+        // Backstop B: they got genuinely close, then travelled well past,
+        // without any fix ever confirming arrival. Covers the case backstop A
+        // cannot — a participant who never entered the wake region at all, so
+        // no exit event will ever arrive.
+        //
+        // "They are tens of metres past where they got closest" is a far
+        // coarser claim than "they are within 10m", so it tolerates a far
+        // coarser fix — the same 50m limit that `closestApproachToArmed` is
+        // itself measured with, which is what makes the comparison meaningful.
+        guard tuning.isRecedeBackstopEnabled,
+              fix.horizontalAccuracy <= closestApproachAccuracyLimit,
+              let closest = closestApproachToArmed,
+              closest <= tuning.backstopApproachDistance,
+              distance >= closest + tuning.backstopRecedeDistance
+        else {
+            recedeRun = 0
+            return
+        }
+        recedeRun += 1
+        if recedeRun >= tuning.confirmingFixCount {
+            fireBackstop(reason: .receded)
+        }
+    }
+
+    /// Fires the armed waypoint because it was demonstrably passed without a
+    /// close-enough fix ever confirming arrival.
+    ///
+    /// The row is logged as `trigger_source = automatic` with a `backstop: …`
+    /// note, because the participant's own movement did cause it. It is **not**
+    /// evidence of arrival at the waypoint: `closest_approach_m` on these rows
+    /// exceeds the trigger radius by definition, which is both the diagnostic
+    /// and a reliable way to filter them out in analysis.
+    private func fireBackstop(reason: BackstopReason) {
+        guard isActive, currentIndex < walkQueue.count else { return }
+        let waypoint = walkQueue[currentIndex]
+        guard !triggeredWaypointIDs.contains(waypoint.id) else { return }
+
+        deliverPrompt(for: waypoint, at: Date(), source: .automatic, note: reason.note)
     }
 
     /// Records the waypoint, speaks it, and advances to the next one.
     ///
-    /// Shared by the automatic path (`confirmArrival`) and the manual one
-    /// (`playCurrentWaypoint`) so the two cannot drift apart in what they log
-    /// or how they advance — the only difference between the modes should be
-    /// *when* this runs, not what it does.
-
+    /// Shared by the automatic path (`evaluateTrigger`), the backstops and the
+    /// manual one (`playCurrentWaypoint`) so they cannot drift apart in what
+    /// they log or how they advance — the only difference should be *when*
+    /// this runs, not what it does.
     private func deliverPrompt(
         for waypoint: Waypoint,
         at firedAt: Date,
-        source: TriggerSource
+        source: TriggerSource,
+        note: String? = nil
     ) {
+        // Where they were when this played, as distinct from the closest they
+        // ever got. Measured from the same fix as the logged coordinates, and
+        // ungated on accuracy for the same reason those are: `gps_accuracy_m`
+        // and `fix_age_s` say how much to trust it.
+        let triggerDistance = currentFix.map { fix in
+            CLLocation(latitude: fix.latitude, longitude: fix.longitude)
+                .distance(from: CLLocation(latitude: waypoint.latitude, longitude: waypoint.longitude))
+        }
+
         logger?.append(
             type: .waypointTrigger,
             timestamp: firedAt,
             waypoint: waypoint,
             triggerSource: source,
             closestApproachMetres: closestApproachToArmed,
+            triggerDistanceMetres: triggerDistance,
             latitude: currentLatitude,
             longitude: currentLongitude,
-            horizontalAccuracy: currentAccuracy
+            horizontalAccuracy: currentAccuracy,
+            fixTimestamp: currentFix?.timestamp,
+            note: note
         )
         reportLoggingState()
 
@@ -578,116 +790,137 @@ final class WalkSession: NSObject, ObservableObject {
     private func playPrompt(for waypoint: Waypoint) {
         let script = waypoint.script(for: informationLevel)
 
-        // Context-only waypoints have no navigation script, so in Navigation
-        // Only nothing is spoken. Claiming "Playing" for silence would be a
-        // lie, and the completion may never arrive for an empty utterance,
-        // which would leave the banner stuck.
+        // Unreachable in a real session: `armNextWaypoint()` skips waypoints
+        // with no script for this condition, so one can never be delivered.
+        // Kept because it is the last line of defence for a hazard that is
+        // silent when it bites — claiming "Playing" for silence would be a lie,
+        // and an empty utterance's completion may never arrive, leaving the
+        // banner stuck for the rest of the walk.
         guard !script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-        let name = waypoint.name
-        speakingQueue.append(name)
+        let id = waypoint.id
+        speakingQueue.append(SpokenPrompt(waypointID: id, waypointName: waypoint.name))
         // Only take over the banner if nothing is already being spoken —
         // otherwise this prompt is queued behind one the participant is still
         // listening to, and saying so would be wrong.
-        if speakingQueue.count == 1 { banner = .playing(waypointName: name) }
+        if speakingQueue.count == 1 { showFrontOfSpeakingQueue() }
         audioPlayer.play(
             key: waypoint.audioKey(for: informationLevel),
             script: script
         ) { [weak self] in
             // Delegate callbacks are not guaranteed on the main actor.
-            Task { @MainActor in self?.promptDidFinish(waypointName: name) }
+            Task { @MainActor in self?.promptDidFinish(waypointID: id) }
         }
     }
 
     /// Clears the banner when the speech that raised it ends.
     ///
-    /// Guarded on the banner still being *this* prompt's: where waypoints are
-    /// close enough to queue, a later prompt has already replaced the banner
-    /// and the earlier one finishing must not wipe it.
-    private func promptDidFinish(waypointName: String) {
-        if let index = speakingQueue.firstIndex(of: waypointName) {
+    /// Removal is by id, not by position: where waypoints are close enough to
+    /// queue, completions are not guaranteed to be the only thing that emptied
+    /// the queue, and two waypoints can share a name.
+    private func promptDidFinish(waypointID: String) {
+        if let index = speakingQueue.firstIndex(where: { $0.waypointID == waypointID }) {
             speakingQueue.remove(at: index)
         }
-        // Whatever is now at the front is what the participant can hear.
+        showFrontOfSpeakingQueue()
+    }
+
+    /// Points the banner and `nowPlayingWaypointID` at whatever is audible now.
+    ///
+    /// Both describe the same prompt, so they are only ever set together — a
+    /// card left on a waypoint the banner has moved off would be worse than
+    /// the jump this exists to prevent.
+    private func showFrontOfSpeakingQueue() {
         if let nowSpeaking = speakingQueue.first {
-            banner = .playing(waypointName: nowSpeaking)
+            banner = .playing(waypointName: nowSpeaking.waypointName)
+            nowPlayingWaypointID = nowSpeaking.waypointID
         } else {
             banner = routeIsComplete ? .ended : nil
+            nowPlayingWaypointID = nil
         }
     }
 }
 
 extension WalkSession: CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-        Task { @MainActor in self.handleCandidateArrival(regionIdentifier: region.identifier) }
+        Task { @MainActor in self.handleWakeEntry(regionIdentifier: region.identifier) }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
         guard state == .inside else { return }
-        Task { @MainActor in self.handleCandidateArrival(regionIdentifier: region.identifier) }
+        Task { @MainActor in self.handleWakeEntry(regionIdentifier: region.identifier) }
     }
 
+    /// The trigger path. Every fix in the batch is processed in order, not
+    /// just `locations.last`: iOS coalesces updates — routinely while the
+    /// screen is locked, the normal state during a walk — so a single delivery
+    /// can contain an entire approach, and keeping only the newest fix would
+    /// step straight over the arrival.
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
+        guard !locations.isEmpty else { return }
         Task { @MainActor in
-            self.currentLatitude = location.coordinate.latitude
-            self.currentLongitude = location.coordinate.longitude
-            self.currentAccuracy = location.horizontalAccuracy
-            // The live readouts above describe "now", so they use the most
-            // recent fix. Closest approach is a minimum over the whole
-            // approach, so it must consider *every* fix in the batch: iOS
-            // coalesces updates — routinely so while the screen is locked,
-            // which is the normal state during a walk — and the nearest fix is
-            // frequently an intermediate one that `locations.last` discards.
-            self.recordClosestApproach(from: locations)
-            // Fixes are arriving again, so whatever failed has recovered.
+            // Fixes are arriving, so whatever failed has recovered.
             self.locationError = nil
 
-            // Purely informational (debug panel / test mode) — this no longer
-            // drives any triggering or cancellation decision. A previous
-            // version cancelled the dwell confirmation whenever a single raw
-            // GPS fix read as outside the radius, but ordinary GPS noise
-            // (commonly ±5-15m) does that constantly for small radii, which
-            // was cancelling confirmations before the 2-second dwell could
-            // ever complete. Departure is now detected via didExitRegion
-            // instead, which uses CoreLocation's own filtered geofence
-            // state rather than a single noisy fix.
-            guard self.currentIndex < self.walkQueue.count else {
-                self.distanceToNext = nil
-                return
+            for fix in locations {
+                // Order within each fix is load-bearing:
+                //  1. the snapshot first, so a prompt fired by this fix logs
+                //     the position and measurement time that caused it;
+                //  2. closest approach next, so if it fires, `armNextWaypoint`
+                //     seeds the next waypoint from this fix;
+                //  3. the trigger last.
+                self.currentFix = FixSnapshot(fix)
+                self.foldIntoClosestApproach(fix)
+                self.evaluateTrigger(with: fix)
+                // Delivering advanced `currentIndex` and armed the next
+                // waypoint, so remaining fixes in this batch are evaluated
+                // against it — correct catch-up through a batched approach,
+                // and only able to fire again if the participant genuinely was
+                // within the next waypoint's radius too.
+                guard self.isActive, self.currentIndex < self.walkQueue.count else { break }
             }
-            let target = self.walkQueue[self.currentIndex]
-            let targetLocation = CLLocation(latitude: target.latitude, longitude: target.longitude)
-            self.distanceToNext = location.distance(from: targetLocation)
+
+            self.updateDistanceToNext()
         }
     }
 
-    /// Folds a batch of fixes into the running minimum distance to the armed
-    /// waypoint.
+    /// Folds one fix into the running minimum distance to the armed waypoint.
     ///
     /// Only fixes precise enough to believe are counted: a reading with ±100m
     /// accuracy that happens to land near the waypoint would record an
     /// approach the participant never made, and an invented number is worse
-    /// for choosing a radius than no number at all.
-    private func recordClosestApproach(from locations: [CLLocation]) {
+    /// for choosing a radius than no number at all. This limit is deliberately
+    /// looser than `tuning.triggerAccuracyLimit` — a fix good enough to
+    /// measure with is not necessarily good enough to fire on.
+    private func foldIntoClosestApproach(_ location: CLLocation) {
         guard isActive, currentIndex < walkQueue.count else { return }
+        guard location.horizontalAccuracy > 0,
+              location.horizontalAccuracy <= closestApproachAccuracyLimit
+        else { return }
+
         let target = walkQueue[currentIndex]
         let targetLocation = CLLocation(latitude: target.latitude, longitude: target.longitude)
-
-        for location in locations {
-            guard location.horizontalAccuracy > 0,
-                  location.horizontalAccuracy <= closestApproachAccuracyLimit
-            else { continue }
-            lastUsableFix = location
-            let distance = location.distance(from: targetLocation)
-            if distance < (closestApproachToArmed ?? .greatestFiniteMagnitude) {
-                closestApproachToArmed = distance
-            }
+        lastUsableFix = location
+        let distance = location.distance(from: targetLocation)
+        if distance < (closestApproachToArmed ?? .greatestFiniteMagnitude) {
+            closestApproachToArmed = distance
         }
     }
 
+    /// Live "how far to the next waypoint" readout for the debug panel and
+    /// Manual Mode's cue hint. Observational only.
+    private func updateDistanceToNext() {
+        guard currentIndex < walkQueue.count, let fix = currentFix else {
+            distanceToNext = nil
+            return
+        }
+        let target = walkQueue[currentIndex]
+        distanceToNext = CLLocation(latitude: fix.latitude, longitude: fix.longitude)
+            .distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude))
+    }
+
     nonisolated func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-        Task { @MainActor in self.handleExit(regionIdentifier: region.identifier) }
+        Task { @MainActor in self.handleWakeExit(regionIdentifier: region.identifier) }
     }
 
     // Location failures go to their own property rather than overwriting

@@ -44,7 +44,15 @@ final class RouteDataTests: XCTestCase {
         """.data(using: .utf8)!
 
         let wp = try JSONDecoder().decode(Waypoint.self, from: json)
-        XCTAssertNil(wp.contextualPrompt)
+        // `contextualPrompt` is a non-optional `String`, so an absent key is
+        // defaulted to "" rather than failing the decode — one waypoint
+        // missing the field must not take the whole route file down with it.
+        XCTAssertEqual(wp.contextualPrompt, "")
+        // Absent is the same as empty: not on the contextual route. There is
+        // deliberately no fallback to the navigation prompt.
+        XCTAssertEqual(wp.script(for: .navigationPlusContext), "")
+        XCTAssertFalse(wp.isOnRoute(for: .navigationPlusContext))
+        XCTAssertTrue(wp.isOnRoute(for: .navigationOnly))
     }
 
     func testWaypointCoordinateProperty() throws {
@@ -81,12 +89,12 @@ final class RouteDataTests: XCTestCase {
 
     func testWalkAWaypointCount() throws {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
-        XCTAssertEqual(walk.waypoints.count, 28)
+        XCTAssertEqual(walk.waypoints.count, 29)
     }
 
     func testWalkBWaypointCount() throws {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
-        XCTAssertEqual(walk.waypoints.count, 27)
+        XCTAssertEqual(walk.waypoints.count, 31)
     }
 
     // MARK: - Ordering
@@ -138,38 +146,71 @@ final class RouteDataTests: XCTestCase {
         }
     }
 
-    /// The contextual condition must never be silent: where a waypoint has no
-    /// contextual script, `script(for:)` falls back to the navigation prompt.
-    func testContextualConditionIsNeverSilent() throws {
-        for wp in try allWaypoints() {
-            let script = wp.script(for: .navigationPlusContext)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            XCTAssertFalse(script.isEmpty, "\(wp.id) has nothing to say in Navigation + Context")
-        }
+    // MARK: - Condition-branched routes
+    //
+    // A waypoint with no script for a condition is not on that condition's
+    // route: `WalkSession` skips it rather than firing it silently. These two
+    // tests pin the exact off-route set per condition, and they are the guard
+    // that makes dropping the old navigation-prompt fallback safe — without
+    // them, a waypoint authored with a forgotten `contextualPrompt` would
+    // quietly vanish from the contextual route and nobody would find out until
+    // a participant walked past it.
+    //
+    // Both lists are in walk order. Update them only alongside a deliberate
+    // route change.
+
+    /// Waypoints that exist purely to deliver environmental context and carry
+    /// no navigation instruction, plus `a11` — the contextual branch through
+    /// Gordon Square. Skipped under Navigation Only.
+    func testOffRouteUnderNavigationOnlyIsExactlyTheKnownSet() throws {
+        let offRoute = try allWaypoints()
+            .filter { !$0.isOnRoute(for: .navigationOnly) }
+            .map(\.id)
+        XCTAssertEqual(offRoute, ["a2", "a11", "a16", "b2", "b11", "b29", "b30"])
     }
 
-    /// Some waypoints exist purely to deliver environmental context and carry
-    /// no navigation instruction, so they are deliberately silent in the
-    /// Navigation Only condition. Pinned so that a data edit which blanks a
-    /// prompt by accident shows up as a failure rather than as silence in the
-    /// field.
-    func testOnlyTheKnownContextOnlyWaypointsAreSilentInNavigationOnly() throws {
-        var silent: [String] = []
+    /// The navigation branches through Gordon Square — `a10` in Walk A, `b21`
+    /// in Walk B — and nothing else. Under Navigation + Context the route
+    /// crosses the square the other way, so these must not fire; before the
+    /// fallback was removed they did, reading out the wrong turn in a
+    /// synthesised voice because no `_context.mp3` was ever recorded for them.
+    func testOffRouteUnderNavigationPlusContextIsExactlyTheKnownSet() throws {
+        let offRoute = try allWaypoints()
+            .filter { !$0.isOnRoute(for: .navigationPlusContext) }
+            .map(\.id)
+        XCTAssertEqual(offRoute, ["a10", "b21"])
+    }
+
+    /// The branch pairs must not overlap: a waypoint off both routes would be
+    /// dead data, and the two conditions must each still reach the end.
+    func testEachConditionHasAUsableRoute() throws {
+        let walkA = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
+        let walkB = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
+
+        XCTAssertEqual(walkA.routeLength(for: .navigationOnly), 26)
+        XCTAssertEqual(walkA.routeLength(for: .navigationPlusContext), 28)
+        XCTAssertEqual(walkB.routeLength(for: .navigationOnly), 27)
+        XCTAssertEqual(walkB.routeLength(for: .navigationPlusContext), 30)
+    }
+
+    /// Every on-route waypoint must have its recording in the bundle. Missing
+    /// files degrade to text-to-speech per prompt, which is survivable but is
+    /// an audible condition confound in the middle of an otherwise recorded
+    /// walk — and a route edit that outruns the recordings should fail here
+    /// rather than in the field.
+    func testEveryOnRouteWaypointHasItsRecording() throws {
         for wp in try allWaypoints() {
-            if wp.script(for: .navigationOnly)
-                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                silent.append(wp.id)
+            for level in InformationLevel.allCases where wp.isOnRoute(for: level) {
+                let key = wp.audioKey(for: level)
+                XCTAssertNotNil(
+                    Bundle.main.url(
+                        forResource: key,
+                        withExtension: "mp3",
+                        subdirectory: "RecordedWaypointAudio"
+                    ),
+                    "\(key).mp3 is missing — \(wp.id) would fall back to TTS under \(level.rawValue)"
+                )
             }
-        }
-        XCTAssertEqual(silent, ["a2", "a11", "a16", "b2", "b10", "b26"])
-    }
-
-    /// Where a contextual script is absent the app must fall back rather than
-    /// go quiet — these are the waypoints relying on that fallback today.
-    func testWaypointsWithoutContextualScriptFallBackToNavigation() throws {
-        for wp in try allWaypoints() where (wp.contextualPrompt ?? "").isEmpty {
-            XCTAssertEqual(wp.script(for: .navigationPlusContext), wp.navigationPrompt)
-            XCTAssertFalse(wp.navigationPrompt.isEmpty, "\(wp.id) has neither script")
         }
     }
 
@@ -213,17 +254,36 @@ final class RouteDataTests: XCTestCase {
         }
     }
 
-    /// Both routes are currently set to a uniform 5 m for radius calibration:
-    /// the radius is deliberately smaller than anything that will trigger
-    /// reliably, so prompts have to be cued manually and every waypoint row
-    /// records a `closest_approach_m` to size the real radius from.
+    /// 10 m is the calibration default — the distance at which a prompt
+    /// actually fires, evaluated against the location fix stream rather than a
+    /// geofence (see `WalkSession`) — and it is what all but six waypoints
+    /// use. The exceptions are tuned to their own street geometry: a wider
+    /// radius where the approach is open and GPS is the limiting factor, a
+    /// tighter one where the next waypoint is close enough that 10 m would
+    /// make one position satisfy both.
     ///
-    /// Pinned as a single shared value so a partial edit — some waypoints
-    /// changed, some missed — fails here rather than quietly skewing the
-    /// calibration.
-    func testAllTriggerRadiiShareTheCalibrationValue() throws {
-        let radii = Set(try allWaypoints().map(\.triggerRadius))
-        XCTAssertEqual(radii, [5], "expected a uniform 5m calibration radius, found \(radii.sorted())")
+    /// Pinned per waypoint rather than as one shared value, because the radii
+    /// are no longer uniform: a blanket "all equal" assertion would have to be
+    /// deleted at the first deliberate tune, taking the guard with it. This
+    /// shape still fails on a partial edit — some waypoints changed, some
+    /// missed — and a deliberate tune is one line here.
+    func testTriggerRadiiMatchTheirCalibratedValues() throws {
+        let defaultRadius: Double = 10
+        let tuned: [String: Double] = [
+            "a22": 17, "a27": 5, "a28": 5,
+            "b9": 17, "b16": 5, "b29": 5,
+        ]
+
+        for wp in try allWaypoints() {
+            let expected = tuned[wp.id] ?? defaultRadius
+            XCTAssertEqual(
+                wp.triggerRadius, expected,
+                "\(wp.id) fire radius is \(wp.triggerRadius)m, expected \(expected)m"
+                    + (tuned[wp.id] == nil
+                        ? " — tune it deliberately by adding it to `tuned` here"
+                        : "")
+            )
+        }
     }
 
     // MARK: - Information level model

@@ -87,33 +87,8 @@ struct WaypointPreviewCard: View {
                 title: InformationLevel.navigationPlusContext.rawValue,
                 tint: .purple
             ) {
-                contextualText
+                Text(waypoint.contextualPrompt.trimmingCharacters(in: .whitespacesAndNewlines))
             }
-        }
-    }
-
-    /// The contextual script restates the navigation instruction verbatim at
-    /// its start — the two are alternatives, never concatenated. Dimming that
-    /// shared opening makes the *added* context legible instead of looking
-    /// like the text was accidentally duplicated between the two blocks.
-    @ViewBuilder
-    private var contextualText: some View {
-        let contextual = (waypoint.contextualPrompt ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if contextual.isEmpty {
-            Text("No contextual script — the navigation prompt is used instead.")
-                .italic()
-                .foregroundStyle(.secondary)
-        } else if let (shared, added) = Self.splitSharedPrefix(
-            navigation: waypoint.navigationPrompt,
-            contextual: contextual
-        ), !added.isEmpty {
-            Text(shared).foregroundStyle(.secondary)
-                + Text(" ")
-                + Text(added).foregroundStyle(.primary)
-        } else {
-            Text(contextual)
         }
     }
 
@@ -122,8 +97,23 @@ struct WaypointPreviewCard: View {
             title: level.rawValue,
             tint: level == .navigationOnly ? .blue : .purple
         ) {
-            Text(waypoint.script(for: level).trimmingCharacters(in: .whitespacesAndNewlines))
+            if waypoint.isOnRoute(for: level) {
+                Text(waypoint.script(for: level).trimmingCharacters(in: .whitespacesAndNewlines))
+            } else {
+                offRouteText(for: level)
+            }
         }
+    }
+
+    /// A waypoint with no script for a condition is not on that condition's
+    /// route — the Gordon Square branches are built this way — and is skipped
+    /// outright rather than fired silently. Saying so beats an empty block,
+    /// which reads as missing data on the one screen a researcher uses to
+    /// check the branch before a run.
+    private func offRouteText(for level: InformationLevel) -> some View {
+        Text("Not on this route — skipped under \(level.rawValue).")
+            .italic()
+            .foregroundStyle(.secondary)
     }
 
     private func promptBlock<Content: View>(
@@ -140,49 +130,6 @@ struct WaypointPreviewCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Fewest shared words worth dimming. Two is enough to be a real opening
-    /// ("Continue straight", "Turn right") and short enough that the common
-    /// two-word instructions in the route data still split.
-    private static let minimumSharedWords = 2
-
-    /// Splits a contextual script into the opening it shares with the
-    /// navigation prompt and the part that differs, so the card can dim the
-    /// repetition and show the added context at full strength.
-    ///
-    /// This compares word by word rather than checking for a whole-prompt
-    /// prefix, because the scripts are not always written that way. Roughly a
-    /// third of them thread the extra detail *into* the instruction —
-    /// "Continue straight." becomes "Continue straight through Byng Place.",
-    /// "cross the road" becomes "cross the road using the zebra crossing" —
-    /// so an exact prefix test finds nothing to dim on exactly the waypoints
-    /// where the difference is most worth seeing.
-    ///
-    /// Returns nil when the two share too little to be worth splitting (some
-    /// contextual scripts are written from scratch), in which case the caller
-    /// shows the text whole.
-    static func splitSharedPrefix(
-        navigation: String,
-        contextual: String
-    ) -> (shared: String, added: String)? {
-        let navigationWords = words(in: navigation)
-        let contextualWords = words(in: contextual)
-        guard !navigationWords.isEmpty, !contextualWords.isEmpty else { return nil }
-
-        var matched = 0
-        while matched < navigationWords.count,
-              matched < contextualWords.count,
-              normalised(navigationWords[matched]) == normalised(contextualWords[matched]) {
-            matched += 1
-        }
-
-        guard matched >= minimumSharedWords, matched < contextualWords.count else { return nil }
-
-        let shared = contextualWords[0..<matched].joined(separator: " ")
-        let added = contextualWords[matched...].joined(separator: " ")
-        guard !added.isEmpty else { return nil }
-        return (shared, added)
     }
 
     private static func words(in text: String) -> [Substring] {

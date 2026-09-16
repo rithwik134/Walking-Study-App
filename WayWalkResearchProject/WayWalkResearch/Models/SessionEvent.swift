@@ -48,20 +48,60 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     /// was armed. Recorded for both trigger sources, and they answer different
     /// questions:
     ///
-    /// - On an `automatic` row it is, in effect, **the distance at which iOS
-    ///   actually fired the fence** — the measurement that reveals how far the
-    ///   effective radius sits from the configured one.
-    /// - On a `manual` row it is how near they got without the fence firing,
-    ///   which says whether the radius was too small or they were off-route.
+    /// It is a minimum over the whole approach, not the distance at any one
+    /// moment — see `triggerDistanceMetres` for that — and answers *"did they
+    /// ever get near this waypoint"*:
     ///
-    /// Empty only when no fix accurate enough to trust arrived at all.
+    /// - A large value means they never came close, which is a route or
+    ///   wayfinding problem rather than a technical one.
+    /// - A small value on a row that needed a backstop means they *were*
+    ///   there and no fix was accurate enough to confirm it, which points at
+    ///   `TriggerTuning.triggerAccuracyLimit` rather than at the radius.
+    ///
+    /// Only fixes accurate to within 50m contribute, so it cannot invent an
+    /// approach the participant never made. Empty when no such fix arrived.
     let closestApproachMetres: Double?
+
+    /// `waypointTrigger` only: how far from the waypoint the participant was
+    /// **at the moment the prompt played**, in metres.
+    ///
+    /// Distinct from `closestApproachMetres`, and the two answer different
+    /// questions. Closest approach asks *"did they ever get near this
+    /// waypoint"* — the radius-sizing question. This asks *"where were they
+    /// when they heard it"*, which for a navigation study is usually the one
+    /// that matters: an instruction to turn is only useful if it arrives
+    /// before the turn.
+    ///
+    /// For a clean automatic fire the two are nearly equal. For a backstop
+    /// they diverge sharply — a participant can have passed within 2m and only
+    /// be told 70m later, and closest approach alone would hide that entirely.
+    ///
+    /// Measured from the same fix as `latitude`/`longitude`, so read it
+    /// against `gps_accuracy_m` and `fix_age_s`: with a stale or imprecise fix
+    /// this is where the app *believed* they were.
+    let triggerDistanceMetres: Double?
 
     let latitude: Double?
     let longitude: Double?
     let horizontalAccuracy: Double?
 
-    /// Optional free text attached to a flag after the fact.
+    /// When the GPS fix that `latitude`/`longitude`/`horizontalAccuracy`
+    /// describe was actually *measured* — not when the app received it.
+    ///
+    /// iOS coalesces location updates while the screen is locked, which is the
+    /// normal state during a walk, so a fix taken at 10:00:00 can be delivered
+    /// at 10:00:20. Without this the row would claim a position for `timestamp`
+    /// that the participant had already left twenty seconds and thirty metres
+    /// earlier, and nothing in the file would say so. The difference between
+    /// the two is written to the CSV as `fix_age_s`.
+    ///
+    /// Nil for rows with no position at all (`sessionStart`, `sessionEnd`).
+    let fixTimestamp: Date?
+
+    /// Optional free text. Two producers: a note the researcher attaches to a
+    /// flag after the fact, and a `backstop: …` marker written at append time
+    /// when a waypoint was fired by a backstop rather than by a confirmed
+    /// arrival (see `WalkSession`).
     var note: String?
 
     init(
@@ -74,9 +114,11 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         waypointOrder: Int? = nil,
         triggerSource: TriggerSource? = nil,
         closestApproachMetres: Double? = nil,
+        triggerDistanceMetres: Double? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
         horizontalAccuracy: Double? = nil,
+        fixTimestamp: Date? = nil,
         note: String? = nil
     ) {
         self.id = id
@@ -88,9 +130,11 @@ struct SessionEvent: Codable, Identifiable, Equatable {
         self.waypointOrder = waypointOrder
         self.triggerSource = triggerSource
         self.closestApproachMetres = closestApproachMetres
+        self.triggerDistanceMetres = triggerDistanceMetres
         self.latitude = latitude
         self.longitude = longitude
         self.horizontalAccuracy = horizontalAccuracy
+        self.fixTimestamp = fixTimestamp
         self.note = note
     }
 }

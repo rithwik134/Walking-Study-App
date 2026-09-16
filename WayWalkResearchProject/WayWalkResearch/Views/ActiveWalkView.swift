@@ -85,6 +85,10 @@ struct ActiveWalkView: View {
         .animation(.easeInOut(duration: 0.2), value: selectedWaypointID)
         .onAppear { selectFollowedWaypoint() }
         .onChange(of: session.currentWaypointNumber) { selectFollowedWaypoint() }
+        // Speech ending is its own sync point: the number does not change when
+        // a prompt finishes, so without this the card would sit on the played
+        // waypoint until the *next* one fired.
+        .onChange(of: session.nowPlayingWaypointID) { selectFollowedWaypoint() }
         .onChange(of: selectedWaypointID) { previous, current in
             if current != nil, current != followedWaypointID, previous != nil {
                 isFollowingWalk = false
@@ -133,7 +137,14 @@ struct ActiveWalkView: View {
         }
     }
 
+    /// While a prompt is speaking, the card holds on the waypoint being heard:
+    /// `currentWaypointNumber` has already moved to the next armed waypoint by
+    /// then, so following it alone showed one script while playing another.
     private var followedWaypointID: String? {
+        if let playing = session.nowPlayingWaypointID,
+           walk.waypoints.contains(where: { $0.id == playing }) {
+            return playing
+        }
         let index = session.currentWaypointNumber - 1
         guard walk.waypoints.indices.contains(index) else { return nil }
         return walk.waypoints[index].id
@@ -265,8 +276,18 @@ struct ActiveWalkView: View {
             debugRow("Latitude", session.currentLatitude.map { String(format: "%.6f", $0) } ?? "—")
             debugRow("Longitude", session.currentLongitude.map { String(format: "%.6f", $0) } ?? "—")
             debugRow("Next waypoint armed", session.isNextWaypointArmed ? "Yes" : "No")
+            debugRow("Wake region", session.hasEnteredWakeRegion ? "Inside" : "Outside")
+            debugRow("In trigger radius", session.isInsideCurrentRadius ? "Yes" : "No")
             debugRow("Confirming arrival", session.isConfirmingArrival ? "Yes" : "No")
-            debugRow("Triggered", "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)")
+            // How stale the position above is. iOS batches fixes while locked,
+            // so this is the direct measure of how late an automatic prompt
+            // lands — and, with GPS accuracy, what says whether the trigger's
+            // accuracy limit is achievable on this route.
+            debugRow("Fix age", session.currentFix.map { String(format: "%.0fs", Date().timeIntervalSince($0.timestamp)) } ?? "—")
+            // Against the route length for this condition, not the raw
+            // waypoint count — waypoints off this condition's route are never
+            // armed, so they can never be triggered.
+            debugRow("Triggered", "\(session.triggeredWaypointIDs.count) of \(walk.routeLength(for: session.informationLevel))")
             debugRow("Voice", session.audioVoiceDescription)
         }
         .font(.system(.footnote, design: .monospaced))
@@ -333,6 +354,13 @@ struct WalkSummaryView: View {
     let walk: Walk
     var onDone: () -> Void
 
+    /// How many waypoints this condition's route actually contains. Comparing
+    /// against `walk.waypoints.count` would raise "Not every waypoint fired"
+    /// on every clean walk of a condition-branched route.
+    private var routeLength: Int {
+        walk.routeLength(for: session.informationLevel)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -341,12 +369,12 @@ struct WalkSummaryView: View {
                     LabeledContent("Condition", value: session.informationLevel.rawValue)
                     LabeledContent(
                         "Waypoints triggered",
-                        value: "\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count)"
+                        value: "\(session.triggeredWaypointIDs.count) of \(routeLength)"
                     )
                     LabeledContent("Flags", value: "\(flagCount)")
                 }
 
-                if session.triggeredWaypointIDs.count < walk.waypoints.count {
+                if session.triggeredWaypointIDs.count < routeLength {
                     Section {
                         Label(
                             "Not every waypoint fired.",

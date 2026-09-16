@@ -18,7 +18,21 @@ import AVFoundation
 /// check `voiceDescription` in the walk screen's debug panel to confirm the
 /// app picked it up.
 final class SpeechPromptPlayer: NSObject, AudioPromptPlaying {
-    private let synthesizer = AVSpeechSynthesizer()
+    /// `nonisolated(unsafe)` only silences a check Apple's own annotations make
+    /// unsatisfiable: `AVSpeechSynthesizerDelegate` is declared `NS_SWIFT_SENDABLE`,
+    /// so conforming to it below marks this class `Sendable`, while
+    /// `AVSpeechSynthesizer` is declared `NS_SWIFT_NONSENDABLE`. There is no way
+    /// to hold one in a delegate-conforming class without opting out here.
+    ///
+    /// Not a licence to touch it from anywhere: every caller (`play`, `stop`,
+    /// `voiceDescription`) comes in from `WalkSession` or a view, both
+    /// `@MainActor`. The delegate callbacks and the interruption notification
+    /// are the only other entry points, and they arrive on whatever thread
+    /// AVFoundation uses. Isolating the class to `@MainActor` instead would
+    /// need a `@preconcurrency` conformance, which *traps* on an off-main
+    /// callback — a crash mid-walk loses the session, so the warning is
+    /// silenced rather than converted into a runtime precondition.
+    nonisolated(unsafe) private let synthesizer = AVSpeechSynthesizer()
 
     /// Completion handlers keyed by the utterance they belong to.
     ///
@@ -63,13 +77,15 @@ final class SpeechPromptPlayer: NSObject, AudioPromptPlaying {
         let session = AVAudioSession.sharedInstance()
         do {
             // .playback keeps audio playing with the screen locked and the
-            // silent switch on. allowBluetooth / allowBluetoothA2DP route
+            // silent switch on. allowBluetoothHFP / allowBluetoothA2DP route
             // audio to bone-conduction headphones the same way as any other
-            // connected Bluetooth output.
+            // connected Bluetooth output. allowBluetoothHFP is `allowBluetooth`
+            // renamed — same option bit, available on every supported iOS — so
+            // it needs no availability check and changes no routing.
             try session.setCategory(
                 .playback,
                 mode: .spokenAudio,
-                options: [.allowBluetooth, .allowBluetoothA2DP]
+                options: [.allowBluetoothHFP, .allowBluetoothA2DP]
             )
             try session.setActive(true)
         } catch {

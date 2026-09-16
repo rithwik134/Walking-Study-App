@@ -48,10 +48,13 @@ final class RecordedAudioPromptPlayer: NSObject, AudioPromptPlaying {
         super.init()
         fallbackSynthesizer.delegate = self
         do {
+            // allowBluetoothHFP is `allowBluetooth` renamed — same option bit,
+            // available on every supported iOS — so it needs no availability
+            // check and changes no routing. Matches `SpeechPromptPlayer`.
             try AVAudioSession.sharedInstance().setCategory(
                 .playback,
                 mode: .spokenAudio,
-                options: [.allowBluetooth, .allowBluetoothA2DP]
+                options: [.allowBluetoothHFP, .allowBluetoothA2DP]
             )
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {

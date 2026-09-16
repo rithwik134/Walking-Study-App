@@ -37,8 +37,9 @@ final class SessionLogger {
         "event_index", "event_type",
         "time_iso", "time_local", "elapsed_s",
         "waypoint_order", "waypoint_id", "waypoint_name", "trigger_source",
-        "closest_approach_m",
+        "closest_approach_m", "trigger_distance_m",
         "latitude", "longitude", "gps_accuracy_m",
+        "fix_time_local", "fix_age_s",
         "note"
     ]
 
@@ -112,9 +113,11 @@ final class SessionLogger {
         waypoint: Waypoint? = nil,
         triggerSource: TriggerSource? = nil,
         closestApproachMetres: Double? = nil,
+        triggerDistanceMetres: Double? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
         horizontalAccuracy: Double? = nil,
+        fixTimestamp: Date? = nil,
         note: String? = nil
     ) -> UUID {
         let event = SessionEvent(
@@ -126,9 +129,11 @@ final class SessionLogger {
             waypointOrder: waypoint?.order,
             triggerSource: triggerSource,
             closestApproachMetres: closestApproachMetres,
+            triggerDistanceMetres: triggerDistanceMetres,
             latitude: latitude,
             longitude: longitude,
             horizontalAccuracy: horizontalAccuracy,
+            fixTimestamp: fixTimestamp,
             note: note
         )
         events.append(event)
@@ -188,9 +193,19 @@ final class SessionLogger {
             event.waypointName ?? "",
             event.triggerSource?.rawValue ?? "",
             event.closestApproachMetres.map { String(format: "%.1f", $0) } ?? "",
+            event.triggerDistanceMetres.map { String(format: "%.1f", $0) } ?? "",
             event.latitude.map { String(format: "%.6f", $0) } ?? "",
             event.longitude.map { String(format: "%.6f", $0) } ?? "",
             event.horizontalAccuracy.map { String(format: "%.1f", $0) } ?? "",
+            // Both derived from values *stored on the event*, never from
+            // `Date()` at write time. The whole file is regenerated after every
+            // mutation, so a value that moved on each rewrite would make an
+            // already-written row change under a later flag's note — see
+            // `attachNote`. Blank rather than 0.0 when no fix is known, matching
+            // `closest_approach_m`; a negative age is left as-is because it is a
+            // diagnostic, not noise to hide.
+            event.fixTimestamp.map { localTimeFormatter.string(from: $0) } ?? "",
+            event.fixTimestamp.map { String(format: "%.1f", event.timestamp.timeIntervalSince($0)) } ?? "",
             event.note ?? ""
         ]
         return fields.map(Self.escape).joined(separator: ",")

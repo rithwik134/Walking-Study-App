@@ -83,6 +83,10 @@ struct ManualWalkView: View {
         .animation(.easeInOut(duration: 0.2), value: session.isInsideCurrentRadius)
         .onAppear { selectFollowedWaypoint() }
         .onChange(of: session.currentWaypointNumber) { selectFollowedWaypoint() }
+        // Speech ending is its own sync point: the number does not change when
+        // a prompt finishes, so without this the card would sit on the played
+        // waypoint until the *next* one fired.
+        .onChange(of: session.nowPlayingWaypointID) { selectFollowedWaypoint() }
         .onChange(of: selectedWaypointID) { previous, current in
             if current != nil, current != followedWaypointID, previous != nil {
                 isFollowingWalk = false
@@ -126,7 +130,14 @@ struct ManualWalkView: View {
         }
     }
 
+    /// While a prompt is speaking, the card holds on the waypoint being heard:
+    /// `currentWaypointNumber` has already moved to the next armed waypoint by
+    /// then, so following it alone showed one script while playing another.
     private var followedWaypointID: String? {
+        if let playing = session.nowPlayingWaypointID,
+           walk.waypoints.contains(where: { $0.id == playing }) {
+            return playing
+        }
         guard let index = currentIndex else { return nil }
         return walk.waypoints[index].id
     }
@@ -145,7 +156,10 @@ struct ManualWalkView: View {
                     .font(.caption.bold())
                     .foregroundStyle(.indigo)
                 Spacer()
-                Text("\(session.triggeredWaypointIDs.count) of \(walk.waypoints.count) played")
+                // Route length for this condition, not the raw waypoint count:
+                // waypoints off this condition's route are skipped, so the cue
+                // button never offers them.
+                Text("\(session.triggeredWaypointIDs.count) of \(walk.routeLength(for: session.informationLevel)) played")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -198,6 +212,14 @@ struct ManualWalkView: View {
         // Green once inside the radius, grey outside — but still pressable
         // either way, which is the whole point of the mode. `.disabled` is
         // used only when there is genuinely nothing left to play.
+        //
+        // "Inside" now means a location fix put the participant within the
+        // waypoint's `triggerRadius`, not that CoreLocation reported region
+        // entry. It therefore lights much later than it used to — at ~10m
+        // rather than the 25-33m the coarse region reported — and can flicker
+        // at the boundary. That is the honest reading, and it finally matches
+        // the circle the map draws to scale. The distance in `cueHint` below
+        // is the better cue for anticipating a prompt.
         .tint(session.isInsideCurrentRadius ? .green : .gray)
         .disabled(isComplete)
     }
