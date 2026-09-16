@@ -44,7 +44,10 @@ final class RouteDataTests: XCTestCase {
         """.data(using: .utf8)!
 
         let wp = try JSONDecoder().decode(Waypoint.self, from: json)
-        XCTAssertNil(wp.contextualPrompt)
+        // `contextualPrompt` is a non-optional `String`, so an absent key is
+        // defaulted to "" rather than failing the decode — one waypoint
+        // missing the field must not take the whole route file down with it.
+        XCTAssertEqual(wp.contextualPrompt, "")
         // Absent is the same as empty: not on the contextual route. There is
         // deliberately no fallback to the navigation prompt.
         XCTAssertEqual(wp.script(for: .navigationPlusContext), "")
@@ -163,7 +166,7 @@ final class RouteDataTests: XCTestCase {
         let offRoute = try allWaypoints()
             .filter { !$0.isOnRoute(for: .navigationOnly) }
             .map(\.id)
-        XCTAssertEqual(offRoute, ["a2", "a11", "a16", "a27", "b2", "b11", "b29", "b30"])
+        XCTAssertEqual(offRoute, ["a2", "a11", "a16", "b2", "b11", "b29", "b30"])
     }
 
     /// The navigation branches through Gordon Square — `a10` in Walk A, `b21`
@@ -184,7 +187,7 @@ final class RouteDataTests: XCTestCase {
         let walkA = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
         let walkB = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkB))
 
-        XCTAssertEqual(walkA.routeLength(for: .navigationOnly), 25)
+        XCTAssertEqual(walkA.routeLength(for: .navigationOnly), 26)
         XCTAssertEqual(walkA.routeLength(for: .navigationPlusContext), 28)
         XCTAssertEqual(walkB.routeLength(for: .navigationOnly), 27)
         XCTAssertEqual(walkB.routeLength(for: .navigationPlusContext), 30)
@@ -251,18 +254,36 @@ final class RouteDataTests: XCTestCase {
         }
     }
 
-    /// Both routes are set to a uniform 10 m: the distance at which a prompt
+    /// 10 m is the calibration default — the distance at which a prompt
     /// actually fires, evaluated against the location fix stream rather than a
-    /// geofence (see `WalkSession`). Chosen as the largest value that stays
-    /// below half the smallest gap between consecutive waypoints on either
-    /// route, so one position cannot ordinarily satisfy two waypoints at once,
-    /// while remaining plausible against ±10-15 m urban GPS.
+    /// geofence (see `WalkSession`) — and it is what all but six waypoints
+    /// use. The exceptions are tuned to their own street geometry: a wider
+    /// radius where the approach is open and GPS is the limiting factor, a
+    /// tighter one where the next waypoint is close enough that 10 m would
+    /// make one position satisfy both.
     ///
-    /// Pinned as a single shared value so a partial edit — some waypoints
-    /// changed, some missed — fails here rather than quietly skewing the data.
-    func testAllTriggerRadiiShareTheCalibrationValue() throws {
-        let radii = Set(try allWaypoints().map(\.triggerRadius))
-        XCTAssertEqual(radii, [10], "expected a uniform 10m fire radius, found \(radii.sorted())")
+    /// Pinned per waypoint rather than as one shared value, because the radii
+    /// are no longer uniform: a blanket "all equal" assertion would have to be
+    /// deleted at the first deliberate tune, taking the guard with it. This
+    /// shape still fails on a partial edit — some waypoints changed, some
+    /// missed — and a deliberate tune is one line here.
+    func testTriggerRadiiMatchTheirCalibratedValues() throws {
+        let defaultRadius: Double = 10
+        let tuned: [String: Double] = [
+            "a22": 17, "a27": 5, "a28": 5,
+            "b9": 17, "b16": 5, "b29": 5,
+        ]
+
+        for wp in try allWaypoints() {
+            let expected = tuned[wp.id] ?? defaultRadius
+            XCTAssertEqual(
+                wp.triggerRadius, expected,
+                "\(wp.id) fire radius is \(wp.triggerRadius)m, expected \(expected)m"
+                    + (tuned[wp.id] == nil
+                        ? " — tune it deliberately by adding it to `tuned` here"
+                        : "")
+            )
+        }
     }
 
     // MARK: - Information level model

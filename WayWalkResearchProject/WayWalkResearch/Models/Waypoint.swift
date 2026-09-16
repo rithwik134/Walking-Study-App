@@ -40,7 +40,53 @@ struct Waypoint: Codable, Identifiable, Equatable {
     /// Empty or absent means **this waypoint is not on the Navigation +
     /// Context route** — see `script(for:)`. It does *not* fall back to the
     /// navigation prompt.
+    ///
+    /// Non-optional, but still optional *in the JSON*: `init(from:)` below
+    /// defaults an absent key to `""`.
     let contextualPrompt: String
+
+    /// Decodes an absent `contextualPrompt` as `""` rather than failing.
+    ///
+    /// The synthesised decoder treats a non-optional property as a required
+    /// key, which turns one hand-authored waypoint missing the field into a
+    /// `keyNotFound` that fails the **whole file** — every waypoint on the
+    /// route, not just that one, so the walk cannot start at all. Defaulting
+    /// here keeps the blast radius at one waypoint and routes it into the
+    /// behaviour already documented above: absent reads as empty, which means
+    /// off the Navigation + Context route. `RouteDataTests` pins the exact
+    /// off-route set, so an accidental omission still fails the suite rather
+    /// than going unnoticed.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        order = try container.decode(Int.self, forKey: .order)
+        name = try container.decode(String.self, forKey: .name)
+        latitude = try container.decode(Double.self, forKey: .latitude)
+        longitude = try container.decode(Double.self, forKey: .longitude)
+        triggerRadius = try container.decode(Double.self, forKey: .triggerRadius)
+        navigationPrompt = try container.decode(String.self, forKey: .navigationPrompt)
+        contextualPrompt = try container.decodeIfPresent(String.self, forKey: .contextualPrompt) ?? ""
+    }
+
+    init(
+        id: String,
+        order: Int,
+        name: String,
+        latitude: Double,
+        longitude: Double,
+        triggerRadius: Double,
+        navigationPrompt: String,
+        contextualPrompt: String
+    ) {
+        self.id = id
+        self.order = order
+        self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
+        self.triggerRadius = triggerRadius
+        self.navigationPrompt = navigationPrompt
+        self.contextualPrompt = contextualPrompt
+    }
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)

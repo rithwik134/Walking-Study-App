@@ -35,7 +35,7 @@ xcodebuild test -project WayWalkResearch.xcodeproj -scheme WayWalkResearch \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-138 tests, ~30s, no simulator location or network required — `WalkSession` is
+141 tests, ~30s, no simulator location or network required — `WalkSession` is
 driven through the `LocationProviding` protocol with a stand-in that emits
 only the fixes a test hands it. Covers the CSV (`SessionLoggerTests`), the
 distance columns (`ClosestApproachTests`), the two-stage trigger and both
@@ -46,7 +46,7 @@ banner), and route/path JSON decoding (`RouteDataTests`, `RoutePathTests`).
 `SimulatedWalkTests` is the one to run after touching triggering: it walks a
 synthetic participant along the real walkA geometry at 1.4 m/s with realistic
 GPS noise, and prints what fired, at what distance, and how far apart. It found
-a bug the other 129 tests missed — the recede backstop was unreachable whenever
+a bug the rest of the suite missed — the recede backstop was unreachable whenever
 fixes were too imprecise to fire on, which is exactly when it is needed.
 
 ## Project layout
@@ -86,7 +86,7 @@ WayWalkResearch/
       WalkStatusBanner.swift      ← floating "Playing…" / "Walk ended" status pill
   Assets.xcassets/                ← empty AppIcon slot + AccentColor (add a real icon before App Store submission)
   Info.plist
-WayWalkResearchTests/             ← XCTest suite, 138 tests (see "Running tests" above)
+WayWalkResearchTests/             ← XCTest suite, 141 tests (see "Running tests" above)
 waypoint-picker.html              ← browser tool for placing waypoints on a map and exporting walkA.json / walkB.json
 ```
 
@@ -123,29 +123,32 @@ navigation-only; the contextual route through the square is carried by `b20`'s
 longer script instead.
 
 The same rule covers waypoints that exist purely to describe the surroundings
-(`a2`, `a16`, `a27`, `b2`, `b11`, `b29`, `b30`). They have no navigation
+(`a2`, `a16`, `b2`, `b11`, `b29`, `b30`). They have no navigation
 instruction — the preceding waypoint already gave it — so a Navigation Only
 walk steps straight over them.
 
 Two things follow, and both matter when reading the data:
 
 - **A CSV has fewer waypoint rows than the route has waypoints, and the
-  number differs by condition.** Walk A fires 25 of 29 under Navigation Only
+  number differs by condition.** Walk A fires 26 of 29 under Navigation Only
   and 28 of 29 under Navigation + Context; Walk B fires 27 of 31 and 30 of
   31. This is correct, not a missed prompt. `waypoint_order` still matches
   the JSON `order`, so the gaps are visible and identifiable.
 - **The waypoint counter on screen skips numbers.** Walk A under Navigation
-  Only goes 1 → 3, and 10 → 12 at Gordon Square. The number shown is always
-  the waypoint's own `order`, so it can be read straight against the map and
-  the CSV.
+  Only goes 1 → 3, 10 → 12 at Gordon Square, and 15 → 17. The number shown is
+  always the waypoint's own `order`, so it can be read straight against the
+  map and the CSV.
 
 Tapping a waypoint on any of the map screens shows which conditions it
 belongs to; one that is off the displayed route says so in place of its
 script. If you author a new waypoint and leave a prompt blank, you are
 removing it from that condition's route — the app will not fall back to the
-other condition's text. `RouteDataTests` pins the exact list of one-condition
-waypoints, so an accidental blank fails the test suite rather than going
-unnoticed until a participant walks past it.
+other condition's text. Omitting `contextualPrompt` from the JSON entirely
+does the same thing: an absent key is read as empty rather than failing the
+decode, so one hand-edited waypoint cannot take the whole route file down
+with it. `RouteDataTests` pins the exact list of one-condition waypoints, so
+an accidental blank fails the test suite rather than going unnoticed until a
+participant walks past it.
 
 ## Recorded data
 
@@ -291,12 +294,32 @@ So triggering is now two-stage:
    supports for relaunching a suspended app while the phone is locked.
 2. **The prompt fires from the GPS fix stream**, when two consecutive fixes,
    each accurate to within 25 m, put the participant inside the waypoint's
-   `triggerRadius` (currently 10 m).
+   `triggerRadius` (10 m on most waypoints — see below).
 
 `triggerRadius` in the route JSON is therefore **the distance at which a prompt
 fires**, not a geofence radius — and it is what the maps draw to scale. The
 backstops above exist because a waypoint that never fires would otherwise block
 the rest of the walk.
+
+### Fire radii are per waypoint, not one global value
+
+10 m is the default and what all but six waypoints use. The exceptions are
+tuned to the geometry of their own bit of street:
+
+| Waypoint | Radius | Why |
+|---|---|---|
+| `a22`, `b9` | 17 m | Open approaches with 60-120 m to the nearest neighbouring waypoint. Nothing else is close enough to fire by mistake, so the radius is widened towards what urban GPS can actually deliver. |
+| `a27`, `a28`, `b16`, `b29` | 5 m | The neighbouring waypoint is 8-23 m away. At 10 m a single position would sit inside both, and the second prompt would fire on the heels of the first. |
+
+The trade-off runs both ways, so neither is free: a 5 m radius is below typical
+urban GPS error and will more often fall through to a backstop, while a 17 m one
+fires earlier — further from the thing being described. Read
+`closest_approach_m` and `trigger_distance_m` per waypoint rather than assuming
+a single radius across the route.
+
+`RouteDataTests.testTriggerRadiiMatchTheirCalibratedValues` pins every radius
+individually, so a stray edit fails the suite; a deliberate re-tune is one line
+in that test.
 
 **Both radius figures above are still worth re-measuring on the actual iPhone**
 before a study, using `closest_approach_m`, `gps_accuracy_m` and `fix_age_s`
@@ -358,10 +381,10 @@ Judging the right moment is the point of the mode, and a button that refused to
 work until CoreLocation agreed would take that judgement away exactly when it
 is wanted.
 
-Green now means a GPS fix put the participant within the waypoint's
-`triggerRadius` — about 10 m — rather than the much coarser CoreLocation
-region entry it used to track. It therefore lights considerably later, and can
-flicker at the boundary. That is the honest reading, and it matches the circle
+Green now means a GPS fix put the participant within the waypoint's own
+`triggerRadius` — 10 m on most waypoints, 5 m or 17 m on the six tuned ones —
+rather than the much coarser CoreLocation region entry it used to track. It
+therefore lights considerably later, and can flicker at the boundary. That is the honest reading, and it matches the circle
 drawn on the map; the **"n m away"** figure under the button is the better cue
 for anticipating a prompt.
 
@@ -387,7 +410,6 @@ participant sees an identical line.
 The line is decoration for the researcher. Navigation ground truth is, and
 remains, the pre-written prompts in the route JSON.
 
-To regenerate after moving waypoints: open **View route map**, pick the walk,
 To regenerate after moving waypoints, run this on the Mac from the repo root:
 
 ```bash
@@ -458,17 +480,19 @@ expected: the line is drawn over both condition branches at once (below).
   positions and radii before real data collection.
 - **Waypoint preview cards.** Tapping a waypoint on any of the three maps
   opens a card with its number, radius, coordinates and script. The route
-  overview and test mode show *both* conditions side by side for
-  proof-reading; the active walk shows only the one that will actually be
-  spoken. In the two-condition view the opening that the contextual script
-  shares with the navigation prompt is dimmed, so the added context stands
-  out — the scripts are alternatives, never played back to back.
-- **Trigger radii are drawn to true scale** on all three maps. At the 10m
-  radius every waypoint in both routes currently uses, they are sub-pixel
-  until you zoom well in. That is deliberate: seeing their real size against
-  the street is the point. The circle is the distance at which a prompt
-  fires, so it is honest — the 100 m region CoreLocation actually monitors
-  is not drawn, because it never fires anything.
+  overview and test mode show *both* conditions in full for proof-reading;
+  the active walk shows only the one that will actually be spoken. Each
+  script is shown whole — the contextual one repeats the navigation
+  instruction at its start, and that repetition is left plainly visible
+  rather than dimmed, because the two are alternatives and only ever one of
+  them is played.
+- **Trigger radii are drawn to true scale** on all three maps, each at its
+  own radius, so the tuned waypoints visibly differ from the rest. At these
+  sizes they are sub-pixel until you zoom well in. That is deliberate:
+  seeing their real size against the street is the point. The circle is the
+  distance at which a prompt fires, so it is honest — the 100 m region
+  CoreLocation actually monitors is not drawn, because it never fires
+  anything.
 
 ## Recorded audio
 
