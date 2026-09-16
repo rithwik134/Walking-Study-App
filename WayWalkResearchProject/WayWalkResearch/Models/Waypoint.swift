@@ -69,7 +69,7 @@ struct Waypoint: Codable, Identifiable, Equatable {
         case .navigationOnly:
             return navigationPrompt
         case .navigationPlusContext:
-            return contextualPrompt ?? ""
+            return contextualPrompt
         }
     }
 

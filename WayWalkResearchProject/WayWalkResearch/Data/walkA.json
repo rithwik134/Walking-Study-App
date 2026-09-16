@@ -76,7 +76,7 @@
     "latitude": 51.523639,
     "longitude": -0.129892,
     "triggerRadius": 10,
-    "navigationPrompt": "In 10 metres, turn right to exit Woburn Square. Then cross the road ahead using the crossing to enter Gordon Square",
+    "navigationPrompt": "Turn right to exit Woburn Square. Then cross the road ahead using the crossing to enter Gordon Square",
     "contextualPrompt": "In 10 metres, turn right to exit Woburn Square. Then cross the road ahead to enter Gordon Square using the zebra crossing. The crossing is intersected by cycleways on either side"
   },
   {
