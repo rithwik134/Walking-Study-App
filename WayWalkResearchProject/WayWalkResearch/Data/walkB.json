@@ -45,7 +45,7 @@
     "name": "Waypoint 5",
     "latitude": 51.527384,
     "longitude": -0.130986,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right onto Eversholt Street then in 120 metres, take the stairs on the left",
     "contextualPrompt": "Turn right then continue north on Eversholt Street for 50 metres."
   },
@@ -53,8 +53,8 @@
     "id": "b6",
     "order": 6,
     "name": "Waypoint 6",
-    "latitude": 51.527801,
-    "longitude": -0.131409,
+    "latitude": 51.527768,
+    "longitude": -0.131440,
     "triggerRadius": 10,
     "navigationPrompt": "Cross Euston Square and continue straight for 50 metres, then take the stairs on the left",
     "contextualPrompt": "Cross the Euston Square bus loop on the left via the signalled crossing, then continue for 50 metres and take the ascending stairs on the left"
@@ -63,8 +63,8 @@
     "id": "b7",
     "order": 7,
     "name": "Waypoint 7",
-    "latitude": 51.528367,
-    "longitude": -0.132026,
+    "latitude": 51.528336,
+    "longitude": -0.131981,
     "triggerRadius": 10,
     "navigationPrompt": "Take the stairs on the left",
     "contextualPrompt": "Take the ascending stairs on the left to enter Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
@@ -83,8 +83,8 @@
     "id": "b9",
     "order": 9,
     "name": "Waypoint 9",
-    "latitude": 51.527585,
-    "longitude": -0.133234,
+    "latitude": 51.527697,
+    "longitude": -0.133268,
     "triggerRadius": 17,
     "navigationPrompt": "Turn left onto the path and continue for 100 metres",
     "contextualPrompt": "Turn left and continue for 100 metres along the south path that connects to Euston Road."
@@ -93,8 +93,8 @@
     "id": "b10",
     "order": 10,
     "name": "Waypoint 10",
-    "latitude": 51.526872,
-    "longitude": -0.132563,
+    "latitude": 51.526838,
+    "longitude": -0.132664,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right onto Euston Road and continue for 100 metres.",
     "contextualPrompt": "Turn right onto Euston Road and continue for 100 metres. A taxi rank is located on the right. University College Hospital is located in this area."
@@ -125,7 +125,7 @@
     "name": "Waypoint 13",
     "latitude": 51.526401,
     "longitude": -0.133866,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn left and cross Euston Road. Then continue straight onto Gordon Street for 200 metres.",
     "contextualPrompt": "Turn left and cross Euston Road. This is an unsignalled crossing with four lanes of traffic."
   },
@@ -227,7 +227,7 @@
     "longitude": -0.130093,
     "triggerRadius": 10,
     "navigationPrompt": "Enter Woburn Square, then continue straight for 80 metres.",
-    "contextualPrompt": "Enter Woburn Square then follow the path for 80 metres. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
+    "contextualPrompt": "Enter Woburn Square then follow the path straight ahead for 80 metres. This is another of several historic garden squares in Bloomsbury, providing a quieter green space separated from surrounding streets. Benches are located around the edges with an open greenspace in the middle"
   },
   {
     "id": "b24",
