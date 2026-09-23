@@ -35,7 +35,7 @@
     "name": "Waypoint 4",
     "latitude": 51.522456,
     "longitude": -0.132409,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "In 200 metres turn right into Woburn Square",
     "contextualPrompt": "In 50 metres cross Malet Street. You are entering the main UCL campus area, characterised by university buildings, shops and moderate pedestrian activity"
   },
@@ -183,9 +183,9 @@
     "id": "a19",
     "order": 19,
     "name": "Waypoint 19",
-    "latitude": 51.52639,
+    "latitude": 51.526428,
     "longitude": -0.133874,
-    "triggerRadius": 10,
+    "triggerRadius": 5,
     "navigationPrompt": "Turn right to cross Melton Street and continue straight for 100 metres.",
     "contextualPrompt": "Turn right to cross Melton Street via the staggered signalled crossing, then continue east on Euston Road for 100 metres. This is a major transport corridor. University College Hospital is located in the area"
   },
