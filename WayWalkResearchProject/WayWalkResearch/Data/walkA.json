@@ -143,8 +143,8 @@
     "id": "a15",
     "order": 15,
     "name": "Waypoint 15",
-    "latitude": 51.524681,
-    "longitude": -0.131871,
+    "latitude": 51.524621,
+    "longitude": -0.131805,
     "triggerRadius": 10,
     "navigationPrompt": "Turn right onto Gordon Street then cross the road using the crossing and continue straight for 200 metres",
     "contextualPrompt": "Turn right onto Gordon Street then cross the road using the zebra crossing and continue north for 150 metres"
@@ -163,8 +163,8 @@
     "id": "a17",
     "order": 17,
     "name": "Waypoint 17",
-    "latitude": 51.525832,
-    "longitude": -0.133223,
+    "latitude": 51.525799,
+    "longitude": -0.133236,
     "triggerRadius": 10,
     "navigationPrompt": "Cross Gower Place and continue straight for 50 metres",
     "contextualPrompt": "Cross Gower Place and continue north for 50 metres. One-way traffic approaches from the right"
@@ -213,8 +213,8 @@
     "id": "a22",
     "order": 22,
     "name": "Waypoint 22",
-    "latitude": 51.527585,
-    "longitude": -0.133234,
+    "latitude": 51.527707,
+    "longitude": -0.133336,
     "triggerRadius": 17,
     "navigationPrompt": "Turn right. Then In 100 metres, take the stairs",
     "contextualPrompt": "Turn right to head east, then in 100 metres, take the descending stairs to exit. You are passing the station entrances and commerce"
@@ -223,11 +223,11 @@
     "id": "a23",
     "order": 23,
     "name": "Waypoint 23",
-    "latitude": 51.528331,
-    "longitude": -0.131977,
+    "latitude": 51.528302,
+    "longitude": -0.132051,
     "triggerRadius": 10,
-    "navigationPrompt": "Take the stairs",
-    "contextualPrompt": "Take the descending stairs to Eversholt Street"
+    "navigationPrompt": "Take the stairs then turn right",
+    "contextualPrompt": "Take the descending stairs, then turn right to Eversholt Street"
   },
   {
     "id": "a24",
@@ -236,8 +236,8 @@
     "latitude": 51.528262,
     "longitude": -0.131922,
     "triggerRadius": 10,
-    "navigationPrompt": "Turn right onto Eversholt Street then continue straight for 120 metres",
-    "contextualPrompt": "Turn right onto Eversholt Street, then continue south for 50 metres"
+    "navigationPrompt": "Continue straight for 120 metres",
+    "contextualPrompt": "Continue south for 50 metres"
   },
   {
     "id": "a25",
@@ -265,7 +265,7 @@
     "name": "Waypoint 27",
     "latitude": 51.527169,
     "longitude": -0.130824,
-    "triggerRadius": 5,
+    "triggerRadius": 8,
     "navigationPrompt": "Turn left and cross Upper Woburn Place, then turn right to continue",
     "contextualPrompt": "Turn left and cross Upper Woburn Place, then turn right to continue"
   },
