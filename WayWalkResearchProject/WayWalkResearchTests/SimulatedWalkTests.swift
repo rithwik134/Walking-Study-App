@@ -175,6 +175,7 @@ final class SimulatedWalkTests: XCTestCase {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
         session.start(walk: walk, informationLevel: .navigationOnly,
                       participantID: "SIM", mode: .test)
+        session.playCurrentWaypoint()
 
         let fixes = simulatedFixes(walk: walk, sigma: sigma,
                                    reportedAccuracy: reportedAccuracy,
@@ -198,14 +199,13 @@ final class SimulatedWalkTests: XCTestCase {
             sigma: 5, reportedAccuracy: 8, title: "clean walk (sigma 5m, reported +/-8m)")
 
         XCTAssertEqual(fired.count, 3, "all three waypoints should fire")
-        for row in fired {
+        // The first waypoint is manually triggered; the rest fire automatically.
+        XCTAssertEqual(fired.first?.triggerSource, .manual)
+        for row in fired.dropFirst() {
             XCTAssertEqual(row.triggerSource, .automatic)
             XCTAssertNil(row.note, "\(row.waypointID ?? "?") should not have needed a backstop")
             let closest = try XCTUnwrap(row.closestApproachMetres)
             XCTAssertLessThan(closest, 10, "\(row.waypointID ?? "?") never got within 10m")
-            // The number that decides whether the instruction was useful: a
-            // clean fire must happen *at* the waypoint, not merely after
-            // having once been near it.
             let atFire = try XCTUnwrap(row.triggerDistanceMetres)
             XCTAssertLessThanOrEqual(atFire, 10,
                 "\(row.waypointID ?? "?") played \(atFire)m from the waypoint")
@@ -230,7 +230,9 @@ final class SimulatedWalkTests: XCTestCase {
             title: "poor accuracy (reported +/-40m, above the 25m limit)")
 
         XCTAssertGreaterThanOrEqual(fired.count, 3, "backstops must keep the walk moving")
-        for row in fired {
+        // The first waypoint is manually triggered; the rest fall through to backstops.
+        XCTAssertEqual(fired.first?.triggerSource, .manual)
+        for row in fired.dropFirst() {
             XCTAssertNotNil(row.note, "with no fix accurate enough to fire on, every row should be a backstop")
             XCTAssertEqual(row.note, "backstop: receded")
         }
@@ -243,6 +245,7 @@ final class SimulatedWalkTests: XCTestCase {
         let walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
         session.start(walk: walk, informationLevel: .navigationOnly,
                       participantID: "SIMBATCH", mode: .test)
+        session.playCurrentWaypoint()
 
         let fixes = simulatedFixes(walk: walk, sigma: 5, reportedAccuracy: 8)
         for batch in stride(from: 0, to: fixes.count, by: 15).map({
@@ -289,6 +292,7 @@ final class SimulatedWalkTests: XCTestCase {
                                           locationManager: SilentLocationManager())
                 session.start(walk: walk, informationLevel: level,
                               participantID: "SIMFULL", mode: .test)
+                session.playCurrentWaypoint()
 
                 let fixes = simulatedFixes(walk: walk, level: level,
                                            waypointCount: expected.count,

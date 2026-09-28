@@ -145,6 +145,20 @@ struct WaypointTestView: View {
                     .foregroundStyle(.green)
             }
 
+            if session.awaitingFirstManualTrigger {
+                Button {
+                    session.playCurrentWaypoint()
+                } label: {
+                    Label("Play waypoint \(session.currentWaypointNumber)",
+                          systemImage: "speaker.wave.2.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+            }
+
             Button(role: .destructive) {
                 session.end()
                 onEnd()
