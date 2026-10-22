@@ -30,9 +30,3 @@ xcuserdata/
 *.env
 .env.*
 secrets.json
-
-# Claude
-CLAUDE.md
-
-#Testing
-Tools/
