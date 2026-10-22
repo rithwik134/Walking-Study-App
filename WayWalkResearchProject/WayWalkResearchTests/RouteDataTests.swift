@@ -256,7 +256,7 @@ final class RouteDataTests: XCTestCase {
 
     /// 10 m is the calibration default — the distance at which a prompt
     /// actually fires, evaluated against the location fix stream rather than a
-    /// geofence (see `WalkSession`) — and it is what all but six waypoints
+    /// geofence (see `WalkSession`) — and it is what 50 of 60 waypoints
     /// use. The exceptions are tuned to their own street geometry: a wider
     /// radius where the approach is open and GPS is the limiting factor, a
     /// tighter one where the next waypoint is close enough that 10 m would
@@ -270,8 +270,8 @@ final class RouteDataTests: XCTestCase {
     func testTriggerRadiiMatchTheirCalibratedValues() throws {
         let defaultRadius: Double = 10
         let tuned: [String: Double] = [
-            "a22": 17, "a27": 5, "a28": 5,
-            "b9": 17, "b16": 5, "b29": 5,
+            "a4": 5, "a19": 5, "a22": 17, "a27": 8, "a28": 5,
+            "b5": 5, "b9": 17, "b13": 5, "b16": 5, "b29": 5,
         ]
 
         for wp in try allWaypoints() {
