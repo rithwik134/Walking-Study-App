@@ -195,6 +195,14 @@ final class WalkSession: NSObject, ObservableObject {
     /// it finally matches the circle the maps draw to true scale.
     @Published private(set) var isInsideCurrentRadius = false
 
+    /// Whether the session is waiting for the researcher to manually trigger
+    /// the first waypoint. True from `start()` until the first waypoint is
+    /// delivered, in study and test modes only. While true, the automatic
+    /// trigger path and both backstops are suppressed identically to manual
+    /// mode, but `isInsideCurrentRadius` and `isConfirmingArrival` still
+    /// update so the researcher can see arrival.
+    @Published private(set) var awaitingFirstManualTrigger = false
+
     // MARK: - Session logging
 
     /// Every waypoint fire and flag is written to disk as it happens — see
@@ -354,6 +362,7 @@ final class WalkSession: NSObject, ObservableObject {
         )
         self.logger = logger
         sessionMode = mode
+        awaitingFirstManualTrigger = (mode != .manual)
         reportLoggingState()
 
         for region in locationManager.monitoredRegions {
@@ -584,9 +593,7 @@ final class WalkSession: NSObject, ObservableObject {
     /// and wifi alone in exactly the conditions where no fix is accurate
     /// enough for `evaluateTrigger` to fire.
     private func handleWakeExit(regionIdentifier: String) {
-        // Manual mode never plays on its own — that is the entire contract of
-        // the mode.
-        guard isActive, sessionMode != .manual else { return }
+        guard isActive, sessionMode != .manual, !awaitingFirstManualTrigger else { return }
         guard currentRegion?.identifier == regionIdentifier else { return }
         // You cannot have passed what you never reached. Guards against an
         // exit for a waypoint approached from outside and never entered.
@@ -685,9 +692,7 @@ final class WalkSession: NSObject, ObservableObject {
             }
             isConfirmingArrival = inRadiusRun > 0
 
-            // Manual mode takes the hint but never the action: the flags above
-            // colour the cue button, and the researcher decides when to play.
-            guard sessionMode != .manual else { return }
+            guard sessionMode != .manual, !awaitingFirstManualTrigger else { return }
 
             if inRadiusRun >= tuning.confirmingFixCount {
                 deliverPrompt(for: waypoint, at: Date(), source: .automatic)
@@ -695,7 +700,7 @@ final class WalkSession: NSObject, ObservableObject {
             }
         }
 
-        guard sessionMode != .manual else { return }
+        guard sessionMode != .manual, !awaitingFirstManualTrigger else { return }
 
         // Backstop B: they got genuinely close, then travelled well past,
         // without any fix ever confirming arrival. Covers the case backstop A
@@ -774,6 +779,7 @@ final class WalkSession: NSObject, ObservableObject {
         reportLoggingState()
 
         triggeredWaypointIDs.insert(waypoint.id)
+        awaitingFirstManualTrigger = false
         lastTriggeredWaypointName = waypoint.name
         isNextWaypointArmed = false
 

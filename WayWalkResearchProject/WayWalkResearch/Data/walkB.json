@@ -63,8 +63,8 @@
     "id": "b7",
     "order": 7,
     "name": "Waypoint 7",
-    "latitude": 51.528336,
-    "longitude": -0.131981,
+    "latitude": 51.528317,
+    "longitude": -0.131958,
     "triggerRadius": 10,
     "navigationPrompt": "Take the stairs on the left",
     "contextualPrompt": "Take the ascending stairs on the left to enter Euston Station, one of London's principal railway and underground stations, dominated by a high level of pedestrian density."
@@ -163,8 +163,8 @@
     "id": "b17",
     "order": 17,
     "name": "Waypoint 17",
-    "latitude": 51.524697,
-    "longitude": -0.131836,
+    "latitude": 51.524699,
+    "longitude": -0.131905,
     "triggerRadius": 10,
     "navigationPrompt": "In 60 metres, turn right onto Gordon Square",
     "contextualPrompt": "In 60 metres, turn right to head south on Gordon Square. This mixed-use street combines pedestrian space, seating, tables, planters and a cycleway within the same streetscape. Access to vehicles is prohibited"

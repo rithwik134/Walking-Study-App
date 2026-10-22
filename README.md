@@ -178,6 +178,13 @@ Three timing details worth knowing:
   prompt fired late and the logged position is where they *were*, not where
   they were when it played. Blank means no fix was known at all.
 
+### The first waypoint is always manually triggered
+
+The first waypoint on every walk is always manually triggered — the researcher
+presses the green **Play waypoint 1** button to begin the route. This ensures
+the participant is ready before the first prompt plays. Subsequent waypoints
+fire automatically as normal.
+
 ### Forced prompts are marked
 
 Every walk screen has a green **Play waypoint n** button. It is a failsafe: if

@@ -217,7 +217,9 @@ struct ActiveWalkView: View {
                 Label(
                     session.routeIsComplete
                         ? "Walk finished"
-                        : "Play waypoint \(session.currentWaypointNumber)",
+                        : session.awaitingFirstManualTrigger
+                            ? "Start: Play waypoint \(session.currentWaypointNumber)"
+                            : "Play waypoint \(session.currentWaypointNumber)",
                     systemImage: session.routeIsComplete
                         ? "checkmark.circle.fill" : "speaker.wave.2.fill"
                 )

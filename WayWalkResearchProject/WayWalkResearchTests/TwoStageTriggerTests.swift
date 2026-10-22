@@ -30,8 +30,16 @@ final class TwoStageTriggerTests: XCTestCase {
                       participantID: "TWOSTAGE", mode: mode)
     }
 
+    /// Clears the first-waypoint manual-trigger gate by playing the current
+    /// waypoint. After this call the session is on wp2 with one manual trigger
+    /// row already logged, and auto-triggering works normally from here on.
+    private func clearFirstWaypointGate() {
+        session.playCurrentWaypoint()
+    }
+
     override func setUpWithError() throws {
         try startSession()
+        clearFirstWaypointGate()
     }
 
     override func tearDownWithError() throws {
@@ -86,8 +94,13 @@ final class TwoStageTriggerTests: XCTestCase {
         walk.waypoints.filter { $0.isOnRoute(for: .navigationOnly) }
     }
 
+    /// The default setUp clears the first-waypoint gate, so after setUp the
+    /// session is armed on wp2 (routeWaypoints[1]). Tests that need the gate
+    /// active call `startSession()` themselves without clearing.
     private var wp1: Waypoint { routeWaypoints[0] }
     private var wp2: Waypoint { routeWaypoints[1] }
+    private var wp3: Waypoint { routeWaypoints[2] }
+    private var wp4: Waypoint { routeWaypoints[3] }
 
     /// Cues forward with the researcher failsafe until `id` is the armed
     /// waypoint, without firing it. Uses only the real delivery path, so the
@@ -112,6 +125,7 @@ final class TwoStageTriggerTests: XCTestCase {
     /// previous design each of those replies started a dwell that fired a
     /// prompt, so a single arrival cascaded through several waypoints.
     func testWakeRegionEntryNeverFiresAnything() async throws {
+        let baseline = triggerRows.count
         // Every way the region can claim the participant is inside, repeatedly.
         manager.simulateEnter()
         await settle()
@@ -122,11 +136,10 @@ final class TwoStageTriggerTests: XCTestCase {
         await settle()
 
         // Plus a real fix, but a long way out — nothing here justifies firing.
-        await deliver([fix(wp1, metres: 60)])
+        await deliver([fix(wp2, metres: 60)])
 
-        XCTAssertTrue(triggerRows.isEmpty, "region entry must not fire a prompt")
-        XCTAssertTrue(player.scripts.isEmpty, "nothing should have been spoken")
-        XCTAssertEqual(session.currentWaypointNumber, 1, "the walk must not have advanced")
+        XCTAssertEqual(triggerRows.count, baseline, "region entry must not fire a prompt")
+        XCTAssertEqual(session.currentWaypointNumber, wp2.order, "the walk must not have advanced")
         XCTAssertTrue(session.hasEnteredWakeRegion, "entry should still be recorded")
     }
 
@@ -135,8 +148,8 @@ final class TwoStageTriggerTests: XCTestCase {
     func testMonitoredRegionUsesTheWakeRadiusNotTheTriggerRadius() throws {
         let region = try XCTUnwrap(manager.monitoredRegion as? CLCircularRegion)
         XCTAssertEqual(region.radius, session.tuning.wakeRadius)
-        XCTAssertNotEqual(region.radius, wp1.triggerRadius)
-        XCTAssertEqual(region.identifier, wp1.id)
+        XCTAssertNotEqual(region.radius, wp2.triggerRadius)
+        XCTAssertEqual(region.identifier, wp2.id)
         XCTAssertFalse(manager.requestedStates.isEmpty,
                        "arm-time requestState should still be issued — it is harmless now")
     }
@@ -144,22 +157,24 @@ final class TwoStageTriggerTests: XCTestCase {
     // MARK: - The fine trigger
 
     func testTwoConsecutiveCloseFixesFireThePrompt() async throws {
-        await deliver([fix(wp1, metres: 4)])
-        XCTAssertTrue(triggerRows.isEmpty, "one fix alone must not fire")
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 4)])
+        XCTAssertEqual(triggerRows.count, baseline, "one fix alone must not fire")
 
-        await deliver([fix(wp1, metres: 4)])
-        XCTAssertEqual(triggerRows.count, 1)
-        XCTAssertEqual(triggerRows.first?.triggerSource, .automatic)
-        XCTAssertNil(triggerRows.first?.note, "a normal fire carries no backstop note")
-        XCTAssertEqual(session.currentWaypointNumber, wp2.order, "should have advanced to the next on-route waypoint")
+        await deliver([fix(wp2, metres: 4)])
+        XCTAssertEqual(triggerRows.count, baseline + 1)
+        XCTAssertEqual(triggerRows.last?.triggerSource, .automatic)
+        XCTAssertNil(triggerRows.last?.note, "a normal fire carries no backstop note")
+        XCTAssertEqual(session.currentWaypointNumber, wp3.order, "should have advanced to the next on-route waypoint")
     }
 
     /// A coalesced batch must fire without waiting on any wall clock. This is
     /// what the old 2-second dwell cost: while locked, fixes arrive in bursts
     /// already seconds old, so adding delay only made a late prompt later.
     func testABatchFiresWithoutWaitingForWallClock() async throws {
-        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 2)])
-        XCTAssertEqual(triggerRows.count, 1, "both fixes in one batch should confirm immediately")
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 3), fix(wp2, metres: 2)])
+        XCTAssertEqual(triggerRows.count, baseline + 1, "both fixes in one batch should confirm immediately")
     }
 
     /// A single close fix must not be enough.
@@ -170,41 +185,46 @@ final class TwoStageTriggerTests: XCTestCase {
     /// `confirmingFixCount` to 1 breaks those tests — deliberately, so the
     /// coupling is discovered here rather than there.
     func testOneCloseFixIsNotEnoughButWouldBeWithKOfOne() async throws {
-        await deliver([fix(wp1, metres: 3)])
-        XCTAssertTrue(triggerRows.isEmpty)
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 3)])
+        XCTAssertEqual(triggerRows.count, baseline)
 
         // Same single fix, k = 1: fires. The difference is the tuning, nothing else.
         try startSession(tuning: TriggerTuning(confirmingFixCount: 1))
-        await deliver([fix(wp1, metres: 3)])
-        XCTAssertEqual(triggerRows.count, 1)
+        clearFirstWaypointGate()
+        await deliver([fix(wp2, metres: 3)])
+        XCTAssertEqual(triggerRows.count, 2)
     }
 
     func testFixesTooImpreciseToBelieveNeverFire() async throws {
+        let baseline = triggerRows.count
         // Sitting on the waypoint, but with an error bar far wider than the
         // radius — that is not evidence of being within 10m.
         for _ in 0..<5 {
-            await deliver([fix(wp1, metres: 1, accuracy: 40)])
+            await deliver([fix(wp2, metres: 1, accuracy: 40)])
         }
-        XCTAssertTrue(triggerRows.isEmpty)
+        XCTAssertEqual(triggerRows.count, baseline)
     }
 
     func testLeavingTheRadiusResetsTheRun() async throws {
-        await deliver([fix(wp1, metres: 4)])
-        await deliver([fix(wp1, metres: 30)])
-        await deliver([fix(wp1, metres: 4)])
-        XCTAssertTrue(triggerRows.isEmpty, "the run must be re-earned from scratch")
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 4)])
+        await deliver([fix(wp2, metres: 30)])
+        await deliver([fix(wp2, metres: 4)])
+        XCTAssertEqual(triggerRows.count, baseline, "the run must be re-earned from scratch")
 
-        await deliver([fix(wp1, metres: 4)])
-        XCTAssertEqual(triggerRows.count, 1)
+        await deliver([fix(wp2, metres: 4)])
+        XCTAssertEqual(triggerRows.count, baseline + 1)
     }
 
     /// An unusable fix is not evidence in either direction, so it must neither
     /// confirm arrival nor break a run built from good fixes.
     func testAnUnusableFixNeitherConfirmsNorResets() async throws {
-        await deliver([fix(wp1, metres: 4)])
-        await deliver([fix(wp1, metres: 1, accuracy: 400)])
-        await deliver([fix(wp1, metres: 4)])
-        XCTAssertEqual(triggerRows.count, 1, "the ±400m fix should have been skipped entirely")
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 4)])
+        await deliver([fix(wp2, metres: 1, accuracy: 400)])
+        await deliver([fix(wp2, metres: 4)])
+        XCTAssertEqual(triggerRows.count, baseline + 1, "the ±400m fix should have been skipped entirely")
     }
 
     /// Firing mid-batch re-arms, so later fixes are evaluated against the next
@@ -212,48 +232,52 @@ final class TwoStageTriggerTests: XCTestCase {
     /// can only fire again when the participant genuinely was within the next
     /// waypoint's radius too.
     func testCatchUpThroughABatchIsAllowedButNotChainFiring() async throws {
+        let baseline = triggerRows.count
         await deliver([
-            fix(wp1, metres: 3), fix(wp1, metres: 3),   // fires waypoint 1
-            fix(wp2, metres: 50)                         // nowhere near waypoint 2
+            fix(wp2, metres: 3), fix(wp2, metres: 3),   // fires wp2
+            fix(wp3, metres: 50)                         // nowhere near wp3
         ])
-        XCTAssertEqual(triggerRows.count, 1, "a distant fix must not fire the next waypoint")
+        XCTAssertEqual(triggerRows.count, baseline + 1, "a distant fix must not fire the next waypoint")
 
-        await deliver([fix(wp2, metres: 3), fix(wp2, metres: 3)])
-        XCTAssertEqual(triggerRows.count, 2, "genuinely arriving at waypoint 2 should fire it")
+        await deliver([fix(wp3, metres: 3), fix(wp3, metres: 3)])
+        XCTAssertEqual(triggerRows.count, baseline + 2, "genuinely arriving at wp3 should fire it")
     }
 
     // MARK: - Backstops
 
     func testWakeExitFiresTheWaypointItPassed() async throws {
+        let baseline = triggerRows.count
         manager.simulateEnter()
         await settle()
-        await deliver([fix(wp1, metres: 40)])   // never close enough to confirm
-        XCTAssertTrue(triggerRows.isEmpty)
+        await deliver([fix(wp2, metres: 40)])   // never close enough to confirm
+        XCTAssertEqual(triggerRows.count, baseline)
 
         manager.simulateExit()
         await settle()
 
-        XCTAssertEqual(triggerRows.count, 1)
-        XCTAssertEqual(triggerRows.first?.triggerSource, .automatic)
-        XCTAssertEqual(triggerRows.first?.note, "backstop: wake_exit")
-        XCTAssertEqual(session.currentWaypointNumber, wp2.order, "the walk must be unblocked")
+        XCTAssertEqual(triggerRows.count, baseline + 1)
+        XCTAssertEqual(triggerRows.last?.triggerSource, .automatic)
+        XCTAssertEqual(triggerRows.last?.note, "backstop: wake_exit")
+        XCTAssertEqual(session.currentWaypointNumber, wp3.order, "the walk must be unblocked")
     }
 
     /// You cannot have passed what you never reached.
     func testWakeExitWithoutEntryFiresNothing() async throws {
+        let baseline = triggerRows.count
         manager.simulateExit()
         await settle()
-        XCTAssertTrue(triggerRows.isEmpty)
+        XCTAssertEqual(triggerRows.count, baseline)
     }
 
     func testRecedingWellPastACloseApproachFires() async throws {
-        await deliver([fix(wp1, metres: 20)])           // close, but outside 10m
-        await deliver([fix(wp1, metres: 80)])           // 80 >= 20 + 50
-        XCTAssertTrue(triggerRows.isEmpty, "one receding fix is not enough")
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 20)])           // close, but outside 10m
+        await deliver([fix(wp2, metres: 80)])           // 80 >= 20 + 50
+        XCTAssertEqual(triggerRows.count, baseline, "one receding fix is not enough")
 
-        await deliver([fix(wp1, metres: 85)])
-        XCTAssertEqual(triggerRows.count, 1)
-        XCTAssertEqual(triggerRows.first?.note, "backstop: receded")
+        await deliver([fix(wp2, metres: 85)])
+        XCTAssertEqual(triggerRows.count, baseline + 1)
+        XCTAssertEqual(triggerRows.last?.note, "backstop: receded")
     }
 
     /// Guards a dogleg: `closestApproachToArmed` is seeded at arm time from
@@ -261,10 +285,11 @@ final class TwoStageTriggerTests: XCTestCase {
     /// recede without ever having approached. Requiring a genuinely close
     /// approach first is what makes that implausible.
     func testRecedingFromADistantClosestApproachDoesNotFire() async throws {
-        await deliver([fix(wp1, metres: 45)])           // never within 30m
-        await deliver([fix(wp1, metres: 100)])
-        await deliver([fix(wp1, metres: 110)])
-        XCTAssertTrue(triggerRows.isEmpty)
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 45)])           // never within 30m
+        await deliver([fix(wp2, metres: 100)])
+        await deliver([fix(wp2, metres: 110)])
+        XCTAssertEqual(triggerRows.count, baseline)
     }
 
     /// The backstop must work with fixes *too poor to fire on* — that is the
@@ -277,33 +302,37 @@ final class TwoStageTriggerTests: XCTestCase {
     /// walk stalled on waypoint 1. The unit suite missed it entirely because
     /// every backstop test used accurate fixes.
     func testRecedeBackstopWorksWithFixesTooPoorToFireOn() async throws {
+        let baseline = triggerRows.count
         // Well outside `triggerAccuracyLimit` (25m), inside the 50m limit that
         // closest approach itself is measured with.
         let poor: CLLocationAccuracy = 40
 
-        await deliver([fix(wp1, metres: 20, accuracy: poor)])
-        await deliver([fix(wp1, metres: 80, accuracy: poor)])
-        await deliver([fix(wp1, metres: 85, accuracy: poor)])
+        await deliver([fix(wp2, metres: 20, accuracy: poor)])
+        await deliver([fix(wp2, metres: 80, accuracy: poor)])
+        await deliver([fix(wp2, metres: 85, accuracy: poor)])
 
-        XCTAssertEqual(triggerRows.count, 1, "the walk must not stall on poor accuracy")
-        XCTAssertEqual(triggerRows.first?.note, "backstop: receded")
+        XCTAssertEqual(triggerRows.count, baseline + 1, "the walk must not stall on poor accuracy")
+        XCTAssertEqual(triggerRows.last?.note, "backstop: receded")
     }
 
     /// …but a fix too poor even to measure with must not drive the backstop
     /// either, or the comparison against `closest_approach_m` is meaningless.
     func testRecedeBackstopIgnoresFixesTooPoorToMeasureWith() async throws {
-        await deliver([fix(wp1, metres: 20)])
-        await deliver([fix(wp1, metres: 80, accuracy: 400)])
-        await deliver([fix(wp1, metres: 85, accuracy: 400)])
-        XCTAssertTrue(triggerRows.isEmpty)
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 20)])
+        await deliver([fix(wp2, metres: 80, accuracy: 400)])
+        await deliver([fix(wp2, metres: 85, accuracy: 400)])
+        XCTAssertEqual(triggerRows.count, baseline)
     }
 
     func testRecedeBackstopCanBeDisabled() async throws {
         try startSession(tuning: TriggerTuning(isRecedeBackstopEnabled: false))
-        await deliver([fix(wp1, metres: 20)])
-        await deliver([fix(wp1, metres: 80)])
-        await deliver([fix(wp1, metres: 85)])
-        XCTAssertTrue(triggerRows.isEmpty)
+        clearFirstWaypointGate()
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 20)])
+        await deliver([fix(wp2, metres: 80)])
+        await deliver([fix(wp2, metres: 85)])
+        XCTAssertEqual(triggerRows.count, baseline)
     }
 
     // MARK: - Modes
@@ -330,14 +359,15 @@ final class TwoStageTriggerTests: XCTestCase {
 
     /// The failsafe is unconditional — that is the whole point of it.
     func testPlayCurrentWaypointStillWorksFarFromTheWaypoint() async throws {
-        await deliver([fix(wp1, metres: 300)])
+        let baseline = triggerRows.count
+        await deliver([fix(wp2, metres: 300)])
         XCTAssertFalse(session.isInsideCurrentRadius)
 
         session.playCurrentWaypoint()
 
-        XCTAssertEqual(triggerRows.count, 1)
-        XCTAssertEqual(triggerRows.first?.triggerSource, .manual)
-        XCTAssertEqual(session.currentWaypointNumber, wp2.order)
+        XCTAssertEqual(triggerRows.count, baseline + 1)
+        XCTAssertEqual(triggerRows.last?.triggerSource, .manual)
+        XCTAssertEqual(session.currentWaypointNumber, wp3.order)
     }
 
     // MARK: - Invariants
@@ -346,7 +376,7 @@ final class TwoStageTriggerTests: XCTestCase {
     /// next waypoint. Progress left set is what used to wedge the walk.
     func testEveryDeliveryPathLeavesNoConfirmationProgress() async throws {
         // Automatic
-        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 3)])
+        await deliver([fix(wp2, metres: 3), fix(wp2, metres: 3)])
         XCTAssertFalse(session.isConfirmingArrival)
         XCTAssertFalse(session.isInsideCurrentRadius)
         XCTAssertFalse(session.hasEnteredWakeRegion, "a fresh waypoint has not been approached")
@@ -373,11 +403,11 @@ final class TwoStageTriggerTests: XCTestCase {
     /// the prompt in fact played once they were 80m away. For a navigation
     /// instruction that difference is the whole story.
     func testBackstopRowsShowWhereTheyActuallyWereWhenItPlayed() async throws {
-        await deliver([fix(wp1, metres: 20)])
-        await deliver([fix(wp1, metres: 80)])
-        await deliver([fix(wp1, metres: 85)])
+        await deliver([fix(wp2, metres: 20)])
+        await deliver([fix(wp2, metres: 80)])
+        await deliver([fix(wp2, metres: 85)])
 
-        let row = try XCTUnwrap(triggerRows.first)
+        let row = try XCTUnwrap(triggerRows.last)
         let closest = try XCTUnwrap(row.closestApproachMetres)
         let atFire = try XCTUnwrap(row.triggerDistanceMetres)
 
@@ -389,22 +419,22 @@ final class TwoStageTriggerTests: XCTestCase {
     /// On a clean fire the two agree, because the fire happens at the closest
     /// point. That is what makes the divergence above meaningful.
     func testCleanFiresHaveMatchingCloseAndAtFireDistances() async throws {
-        await deliver([fix(wp1, metres: 4), fix(wp1, metres: 4)])
+        await deliver([fix(wp2, metres: 4), fix(wp2, metres: 4)])
 
-        let row = try XCTUnwrap(triggerRows.first)
+        let row = try XCTUnwrap(triggerRows.last)
         let closest = try XCTUnwrap(row.closestApproachMetres)
         let atFire = try XCTUnwrap(row.triggerDistanceMetres)
-        XCTAssertLessThanOrEqual(atFire, wp1.triggerRadius)
+        XCTAssertLessThanOrEqual(atFire, wp2.triggerRadius)
         XCTAssertEqual(atFire, closest, accuracy: 1)
     }
 
     /// A forced prompt records how far away they were when the researcher
     /// pressed the button — the number that says whether it was cued sensibly.
     func testManualFiresRecordTheDistanceAtTheMomentOfPressing() async throws {
-        await deliver([fix(wp1, metres: 120)])
+        await deliver([fix(wp2, metres: 120)])
         session.playCurrentWaypoint()
 
-        let row = try XCTUnwrap(triggerRows.first)
+        let row = try XCTUnwrap(triggerRows.last)
         XCTAssertEqual(try XCTUnwrap(row.triggerDistanceMetres), 120, accuracy: 3)
     }
 
@@ -414,13 +444,12 @@ final class TwoStageTriggerTests: XCTestCase {
         let recent = Date(timeIntervalSinceNow: -2)
 
         await deliver([
-            fix(wp1, metres: 3, timestamp: old),
-            fix(wp1, metres: 3, timestamp: recent)
+            fix(wp2, metres: 3, timestamp: old),
+            fix(wp2, metres: 3, timestamp: recent)
         ])
 
-        let row = try XCTUnwrap(triggerRows.first)
+        let row = try XCTUnwrap(triggerRows.last)
         XCTAssertEqual(row.fixTimestamp, recent, "should log the fix that completed the run")
-        // …and the position must come from that same fix.
         XCTAssertEqual(row.latitude ?? 0, session.currentLatitude ?? 0, accuracy: 0.000001)
     }
 
@@ -428,9 +457,9 @@ final class TwoStageTriggerTests: XCTestCase {
     /// age must be visible rather than silently absent.
     func testFixAgeIsRecordedForABatchedFire() async throws {
         let stale = Date(timeIntervalSinceNow: -25)
-        await deliver([fix(wp1, metres: 3, timestamp: stale), fix(wp1, metres: 3, timestamp: stale)])
+        await deliver([fix(wp2, metres: 3, timestamp: stale), fix(wp2, metres: 3, timestamp: stale)])
 
-        let row = try XCTUnwrap(triggerRows.first)
+        let row = try XCTUnwrap(triggerRows.last)
         let age = try XCTUnwrap(row.fixTimestamp.map { row.timestamp.timeIntervalSince($0) })
         XCTAssertGreaterThan(age, 20, "a 25s-old fix should report a large age")
     }
@@ -509,11 +538,9 @@ final class TwoStageTriggerTests: XCTestCase {
     /// Skipping must not fire, speak, or advance past a waypoint that *is* on
     /// the route — the failure mode would be a whole leg silently consumed.
     func testSkippingStopsAtTheFirstOnRouteWaypoint() async throws {
-        // a1 fires; a2 is off-route; a3 is on-route and must be what arms.
-        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 3)])
-
+        // wp1 (a1) was already triggered by setUp's clearFirstWaypointGate.
+        // a2 is off-route and was skipped; wp2 (a3) is armed.
         XCTAssertEqual(session.currentWaypointNumber, 3)
-        XCTAssertEqual(triggerRows.count, 1, "only a1 fired")
         let region = try XCTUnwrap(manager.monitoredRegion as? CLCircularRegion)
         XCTAssertEqual(region.identifier, "a3")
     }
@@ -529,5 +556,57 @@ final class TwoStageTriggerTests: XCTestCase {
 
         session.playCurrentWaypoint()
         XCTAssertEqual(triggerRows.map(\.waypointID), ["a1", "a3"])
+    }
+
+    // MARK: - First waypoint requires manual trigger
+
+    func testFirstWaypointDoesNotAutoFireInStudyMode() async throws {
+        try startSession(mode: .study)
+        XCTAssertTrue(session.awaitingFirstManualTrigger)
+
+        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 3)])
+        XCTAssertTrue(triggerRows.isEmpty, "auto-trigger must be suppressed for the first waypoint")
+        XCTAssertTrue(session.isInsideCurrentRadius, "UI hint must still update")
+        XCTAssertTrue(session.isConfirmingArrival, "UI hint must still update")
+    }
+
+    func testFirstWaypointDoesNotAutoFireInTestMode() async throws {
+        try startSession(mode: .test)
+        XCTAssertTrue(session.awaitingFirstManualTrigger)
+
+        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 3)])
+        XCTAssertTrue(triggerRows.isEmpty, "auto-trigger must be suppressed for the first waypoint")
+    }
+
+    func testFirstWaypointManualTriggerUnlocksAutomatic() async throws {
+        try startSession(mode: .study)
+
+        session.playCurrentWaypoint()
+        XCTAssertFalse(session.awaitingFirstManualTrigger)
+        XCTAssertEqual(triggerRows.count, 1)
+        XCTAssertEqual(triggerRows.first?.triggerSource, .manual)
+
+        await deliver([fix(wp2, metres: 3), fix(wp2, metres: 3)])
+        XCTAssertEqual(triggerRows.count, 2)
+        XCTAssertEqual(triggerRows.last?.triggerSource, .automatic)
+    }
+
+    func testFirstWaypointBackstopASuppressed() async throws {
+        try startSession(mode: .study)
+
+        manager.simulateEnter()
+        await settle()
+        manager.simulateExit()
+        await settle()
+        XCTAssertTrue(triggerRows.isEmpty, "backstop A must not fire for the first waypoint")
+    }
+
+    func testFirstWaypointBackstopBSuppressed() async throws {
+        try startSession(mode: .study)
+
+        await deliver([fix(wp1, metres: 20)])
+        await deliver([fix(wp1, metres: 80)])
+        await deliver([fix(wp1, metres: 85)])
+        XCTAssertTrue(triggerRows.isEmpty, "backstop B must not fire for the first waypoint")
     }
 }
