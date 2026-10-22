@@ -731,9 +731,10 @@ final class WalkSession: NSObject, ObservableObject {
     ///
     /// The row is logged as `trigger_source = automatic` with a `backstop: …`
     /// note, because the participant's own movement did cause it. It is **not**
-    /// evidence of arrival at the waypoint: `closest_approach_m` on these rows
-    /// exceeds the trigger radius by definition, which is both the diagnostic
-    /// and a reliable way to filter them out in analysis.
+    /// evidence of confirmed arrival at the waypoint. Filter by the
+    /// `backstop:` note in analysis; `closest_approach_m` can be inside the
+    /// trigger radius if the closest fix was accurate enough for that metric
+    /// (50 m limit) but too inaccurate to confirm the fine trigger (25 m limit).
     private func fireBackstop(reason: BackstopReason) {
         guard isActive, currentIndex < walkQueue.count else { return }
         let waypoint = walkQueue[currentIndex]
@@ -754,9 +755,11 @@ final class WalkSession: NSObject, ObservableObject {
         source: TriggerSource,
         note: String? = nil
     ) {
-        // Where they were when this played, as distinct from the closest they
-        // ever got. Measured from the same fix as the logged coordinates, and
-        // ungated on accuracy for the same reason those are: `gps_accuracy_m`
+        // Where the latest fix placed them at the delivery decision, as
+        // distinct from the closest they ever got. Playback may start later
+        // if another prompt is queued. Measured from the same fix as the
+        // logged coordinates, and ungated on accuracy for the same reason
+        // those are: `gps_accuracy_m`
         // and `fix_age_s` say how much to trust it.
         let triggerDistance = currentFix.map { fix in
             CLLocation(latitude: fix.latitude, longitude: fix.longitude)

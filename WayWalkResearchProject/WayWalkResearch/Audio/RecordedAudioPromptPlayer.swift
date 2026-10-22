@@ -7,7 +7,7 @@ import AVFoundation
 ///
 /// To use, add MP3 files named to match each waypoint's audio key (e.g.
 /// "a2_nav.mp3", "a2_context.mp3") to the RecordedWaypointAudio folder in the
-/// bundle, then switch WalkSession to use this player:
+/// bundle. `HomeView` currently uses this player:
 ///
 ///     WalkSession(audioPlayer: RecordedAudioPromptPlayer())
 ///

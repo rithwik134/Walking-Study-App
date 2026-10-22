@@ -11,8 +11,8 @@ import MapKit
 /// for why.
 ///
 /// Requests are issued strictly one leg at a time with a pause between them.
-/// A 17-waypoint route is 16 requests, and firing those concurrently reliably
-/// earns an `MKError.loadingThrottled`.
+/// Each route has dozens of legs, and firing those requests concurrently
+/// reliably earns an `MKError.loadingThrottled`.
 @MainActor
 final class RoutePathBuilder: ObservableObject {
     @Published private(set) var isBuilding = false
@@ -22,7 +22,7 @@ final class RoutePathBuilder: ObservableObject {
 
     /// Pause between consecutive directions requests.
     ///
-    /// Raised from 400ms after a 53-leg run (both routes back to back) had
+    /// Raised from 400ms after a long run (both routes back to back) had
     /// its last three legs throttled out — Apple's limit is cumulative across
     /// requests, so a long route, or a second route generated straight after
     /// a first, is exactly when it bites.
@@ -44,7 +44,7 @@ final class RoutePathBuilder: ObservableObject {
     /// Builds the full path. Legs that cannot be routed fall back to a
     /// straight line between their two waypoints and are reported in
     /// `failedLegs`, so a single unroutable segment does not throw away the
-    /// other fifteen — but is also not silently hidden.
+    /// other legs — but is also not silently hidden.
     func build(for walk: Walk) async throws -> RoutePath {
         let waypoints = walk.waypoints
         guard waypoints.count >= 2 else { throw BuilderError.notEnoughWaypoints }

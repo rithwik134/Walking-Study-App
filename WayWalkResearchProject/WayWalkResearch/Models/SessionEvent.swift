@@ -62,15 +62,15 @@ struct SessionEvent: Codable, Identifiable, Equatable {
     /// approach the participant never made. Empty when no such fix arrived.
     let closestApproachMetres: Double?
 
-    /// `waypointTrigger` only: how far from the waypoint the participant was
-    /// **at the moment the prompt played**, in metres.
+    /// `waypointTrigger` only: how far from the waypoint the latest fix placed
+    /// the participant when the app decided to deliver the prompt, in metres.
     ///
     /// Distinct from `closestApproachMetres`, and the two answer different
     /// questions. Closest approach asks *"did they ever get near this
-    /// waypoint"* — the radius-sizing question. This asks *"where were they
-    /// when they heard it"*, which for a navigation study is usually the one
-    /// that matters: an instruction to turn is only useful if it arrives
-    /// before the turn.
+    /// waypoint"* — the radius-sizing question. This asks *"where did the
+    /// latest fix place them at the trigger decision"*. If an earlier prompt
+    /// is still playing, this prompt waits in the audio queue and its audible
+    /// start is not separately logged.
     ///
     /// For a clean automatic fire the two are nearly equal. For a backstop
     /// they diverge sharply — a participant can have passed within 2m and only

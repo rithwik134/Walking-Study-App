@@ -14,8 +14,8 @@ import CoreLocation
 ///    in a study.
 /// 2. **It works with no signal**, which a route fetched at walk start does
 ///    not.
-/// 3. **No startup latency and no throttling.** 17 waypoints means 16
-///    directions requests, which is enough to be rate-limited.
+/// 3. **No startup latency and no throttling.** Each route has many legs,
+///    which is enough for a live directions build to be rate-limited.
 ///
 /// The path is decoration for the researcher's benefit. Navigation ground
 /// truth is, and remains, the pre-written prompts in the route JSON.

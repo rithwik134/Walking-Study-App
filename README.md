@@ -35,7 +35,7 @@ xcodebuild test -project WayWalkResearch.xcodeproj -scheme WayWalkResearch \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-141 tests, ~30s, no simulator location or network required — `WalkSession` is
+146 XCTest methods, no simulator location or network required — `WalkSession` is
 driven through the `LocationProviding` protocol with a stand-in that emits
 only the fixes a test hands it. Covers the CSV (`SessionLoggerTests`), the
 distance columns (`ClosestApproachTests`), the two-stage trigger and both
@@ -84,11 +84,14 @@ WayWalkResearch/
       WaypointPreviewCard.swift   ← the waypoint detail card shared by all three maps
       WaypointMapContent.swift    ← waypoints, radii and route line, shared by all three maps
       WalkStatusBanner.swift      ← floating "Playing…" / "Walk ended" status pill
-  Assets.xcassets/                ← empty AppIcon slot + AccentColor (add a real icon before App Store submission)
+  Assets.xcassets/                ← AppIcon and AccentColor
   Info.plist
-WayWalkResearchTests/             ← XCTest suite, 141 tests (see "Running tests" above)
+WayWalkResearchTests/             ← XCTest suite (see "Running tests" above)
 waypoint-picker.html              ← browser tool for placing waypoints on a map and exporting walkA.json / walkB.json
 ```
+
+At the repository root, `Tools/GenerateRoutePaths/` is the SwiftPM tool for
+regenerating the bundled map paths.
 
 New `.swift` or resource files must also be added to `project.pbxproj` (file
 reference, build file, group, and the target's Sources/Resources phase) or
@@ -168,15 +171,16 @@ Three timing details worth knowing:
 - **`time_local` is bare `HH:MM:SS`** in the device's timezone, so waypoint
   rows paste directly into the `Zone,In,Out` file the WayWalk Analyser
   expects. `time_iso` carries the full date and UTC offset for the archive.
-- **`time_local` is when the prompt started playing** — the moment the app
-  decided, which is also the moment the participant heard it.
+- **`time_local` is when the app decided to deliver the prompt**. The event is
+  logged before playback is requested. If an earlier prompt is still playing,
+  this one waits in the audio queue; its audible start is not separately logged.
 - **`fix_age_s` is how stale the position on that row was**, in seconds: the
   gap between when the GPS fix was *measured* (`fix_time_local`) and when the
   event was recorded. iOS batches location updates while the screen is
   locked — the normal state during a walk — so a row can carry coordinates
   taken twenty seconds and thirty metres earlier. A large value means the
-  prompt fired late and the logged position is where they *were*, not where
-  they were when it played. Blank means no fix was known at all.
+  trigger decision used an old position, not necessarily where they were when
+  it sounded. Blank means no fix was known at all.
 
 ### The first waypoint is always manually triggered
 
@@ -212,10 +216,9 @@ with a `note` of either:
 | `backstop: receded` | They came within 30 m, then travelled 50 m past their closest point, without ever confirming arrival |
 
 **A backstop row is not evidence of arrival**, and typically fires well after
-the waypoint. Two ways to exclude them: filter on `note` starting `backstop:`,
-or — if your analyser ignores `note` — on `closest_approach_m` exceeding the
-waypoint's `triggerRadius`, which is true of every backstop row by definition,
-since a row that got closer than that would have fired normally.
+the waypoint. Identify it by `note` starting `backstop:`. Do not infer it from
+`closest_approach_m` alone: a fix with 25–50 m accuracy can contribute an
+inside-radius closest approach but cannot confirm the fine trigger.
 
 ### Two different distances, and why you need both
 
@@ -225,11 +228,11 @@ can differ by tens of metres:
 | Column | Question it answers |
 |---|---|
 | `closest_approach_m` | **Did they ever get near this waypoint?** The minimum distance over the whole approach. The radius-sizing number. |
-| `trigger_distance_m` | **Where were they when they heard it?** The distance at the moment the prompt played. |
+| `trigger_distance_m` | Where did the latest fix place them when the app decided to deliver the prompt? |
 
-For a clean automatic fire the two are nearly equal — the prompt plays at the
-closest point. They diverge sharply on backstop rows. A simulated walk with
-poor GPS produced this:
+For a clean automatic fire the two are nearly equal — the delivery decision
+is usually near the closest point. They diverge sharply on backstop rows. A
+simulated walk with poor GPS produced this:
 
 | waypoint | closest_approach_m | trigger_distance_m | note |
 |---|---|---|---|
@@ -237,9 +240,10 @@ poor GPS produced this:
 | a2 | 2.7 m | **54.2 m** | `backstop: receded` |
 
 Read `closest_approach_m` alone and every one of those looks like a textbook
-trigger. In fact the participant was told to turn roughly a minute after
-walking past the turn. **For anything about whether an instruction arrived in
-time to be useful, `trigger_distance_m` is the column to use.**
+trigger. In fact the app requested the turn prompt roughly a minute after
+walking past the turn. **For judging whether an instruction was triggered in
+time, use `trigger_distance_m`**, while allowing for GPS fix age and any audio
+queue delay before it was heard.
 
 `trigger_distance_m` is measured from the same fix as `latitude`/`longitude`,
 so read it against `gps_accuracy_m` and `fix_age_s` — with a stale or imprecise
@@ -253,8 +257,9 @@ row fired:
 
 - **`automatic`, no note** — a normal fire. Should be at or inside the
   waypoint's `triggerRadius`; that is what firing means.
-- **`automatic`, `backstop:` note** — how near they came without ever
-  confirming arrival. Always larger than `triggerRadius`.
+- **`automatic`, `backstop:` note** — how near a usable fix placed them without
+  ever confirming arrival. It can be inside `triggerRadius` if the fix was too
+  inaccurate for the fine trigger.
 - **`manual`** — how near they came at the moment the researcher forced it.
 
 Compare it with the waypoint's `triggerRadius` in the route JSON:
@@ -310,13 +315,14 @@ the rest of the walk.
 
 ### Fire radii are per waypoint, not one global value
 
-10 m is the default and what all but six waypoints use. The exceptions are
-tuned to the geometry of their own bit of street:
+10 m is the default and what 50 of 60 waypoints use. The current exceptions
+in the route JSON are:
 
-| Waypoint | Radius | Why |
+| Waypoint | Radius | Note |
 |---|---|---|
-| `a22`, `b9` | 17 m | Open approaches with 60-120 m to the nearest neighbouring waypoint. Nothing else is close enough to fire by mistake, so the radius is widened towards what urban GPS can actually deliver. |
-| `a27`, `a28`, `b16`, `b29` | 5 m | The neighbouring waypoint is 8-23 m away. At 10 m a single position would sit inside both, and the second prompt would fire on the heels of the first. |
+| `a22`, `b9` | 17 m | Wider than the default. |
+| `a27` | 8 m | Between the default and the narrowest radii. |
+| `a4`, `a19`, `a28`, `b5`, `b13`, `b16`, `b29` | 5 m | Narrower than the default. |
 
 The trade-off runs both ways, so neither is free: a 5 m radius is below typical
 urban GPS error and will more often fall through to a backstop, while a 17 m one
@@ -389,7 +395,7 @@ work until CoreLocation agreed would take that judgement away exactly when it
 is wanted.
 
 Green now means a GPS fix put the participant within the waypoint's own
-`triggerRadius` — 10 m on most waypoints, 5 m or 17 m on the six tuned ones —
+`triggerRadius` — 10 m on most waypoints, with 5 m, 8 m and 17 m exceptions —
 rather than the much coarser CoreLocation region entry it used to track. It
 therefore lights considerably later, and can flicker at the boundary. That is the honest reading, and it matches the circle
 drawn on the map; the **"n m away"** figure under the button is the better cue
@@ -427,8 +433,9 @@ It rebuilds both files in place in `WayWalkResearch/Data/`, which are already
 in the target's Copy Bundle Resources phase, so you only need to rebuild the
 app. It routes each consecutive pair of waypoints in turn (58 requests for the
 two routes, deliberately serial — Apple throttles bursts, and backs off when
-it does), and prints any leg it could not route. It needs network and takes a
-couple of minutes.
+it does), and prints any leg it could not route. It needs network and takes
+a few minutes, including a pause between the two walks to avoid cumulative
+MapKit throttling.
 
 The in-app route is still there if you prefer it, or if the tool cannot reach
 Apple's servers: open **View route map**, pick the walk, then the **⋯** menu →
@@ -508,8 +515,9 @@ recordings, not synthesised speech. It looks up `<id>_nav.mp3` /
 `<id>_context.mp3` in `WayWalkResearch/Audio/RecordedWaypointAudio/` (a
 folder reference, so a new MP3 dropped in there is picked up on the next
 build with no project-file changes needed) and falls back to on-device TTS,
-per prompt, for any file that isn't there yet. ~102 of the 110 possible
-recordings exist today; the rest are still riding the fallback.
+per prompt, for any file that isn't there yet. All 111 scripts currently on
+the two condition routes have matching recordings; a route edit may need new
+MP3s. `RouteDataTests.testEveryOnRouteWaypointHasItsRecording` checks this.
 
 Both players implement the same `AudioPromptPlaying` protocol, so the
 triggering logic, Home screen, and active-walk screen never know or care
