@@ -22,6 +22,10 @@ struct ActiveWalkView: View {
     @State private var isFollowingWalk = true
     @State private var noteTarget: FlagNoteTarget?
     @State private var hasEnded = false
+    @State private var confirmingEnd = false
+    @State private var announcements = ParticipantWalkAnnouncements()
+    @Environment(\.scenePhase) private var scenePhase
+    @AccessibilityFocusState private var endButtonFocused: Bool
 
     /// Wraps a flag's event id so it can drive a `.sheet(item:)`.
     private struct FlagNoteTarget: Identifiable {
@@ -51,6 +55,11 @@ struct ActiveWalkView: View {
         .interactiveDismissDisabled()
         .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .onChange(of: accessibilitySnapshot, initial: true) { announceParticipantUpdates() }
+        .onChange(of: scenePhase) { announceParticipantUpdates() }
+        .onReceive(NotificationCenter.default.publisher(for: UIAccessibility.voiceOverStatusDidChangeNotification)) { _ in
+            announceParticipantUpdates()
+        }
     }
 
     private var activeContent: some View {
@@ -73,13 +82,16 @@ struct ActiveWalkView: View {
                             .padding(.bottom, 8)
                         }
                     }
+                    .accessibilityHidden(isParticipantSession)
 
                 controlPanel
             }
             .navigationTitle(
-                session.routeIsComplete
-                    ? "Walk finished"
-                    : "Waypoint \(session.currentWaypointNumber) of \(walk.waypoints.count)"
+                isParticipantSession ? "Walk in progress" : (
+                    session.routeIsComplete
+                        ? "Walk finished"
+                        : "Waypoint \(session.currentWaypointNumber) of \(walk.waypoints.count)"
+                )
             )
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -94,6 +106,12 @@ struct ActiveWalkView: View {
             if current != nil, current != followedWaypointID, previous != nil {
                 isFollowingWalk = false
             }
+        }
+        .alert("End this walk?", isPresented: $confirmingEnd) {
+            Button("End walk", role: .destructive) { finishWalk() }
+            Button("Continue walking", role: .cancel) { endButtonFocused = true }
+        } message: {
+            Text("This stops the instructions and saves the session recorded so far.")
         }
         .sheet(item: $noteTarget) { target in
             FlagNoteSheet(
@@ -168,12 +186,14 @@ struct ActiveWalkView: View {
                 Button(showDebug ? "Hide Debug" : "Debug") { showDebug.toggle() }
                     .font(.footnote)
             }
+            .accessibilityHidden(isParticipantSession)
 
             if let error = session.loggingError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel(isParticipantSession ? ParticipantWalkAnnouncements.loggingFailure : error)
             }
 
             if let error = session.locationError {
@@ -181,16 +201,24 @@ struct ActiveWalkView: View {
                     .font(.caption)
                     .foregroundStyle(.orange)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel(isParticipantSession ? ParticipantWalkAnnouncements.locationFailure : error)
             }
 
-            manualTriggerControls
-            flagControls
+            if isParticipantSession && accessibilitySnapshot.permissionMissing {
+                Text(ParticipantWalkAnnouncements.permissionFailure).font(.body)
+            }
+            if isParticipantSession && session.routeIsComplete && session.nowPlayingWaypointID == nil {
+                Text(ParticipantWalkAnnouncements.completion).font(.body)
+            }
 
-            if showDebug { debugPanel }
+            manualTriggerControls.accessibilityHidden(isParticipantSession)
+            flagControls.accessibilityHidden(isParticipantSession)
+
+            if showDebug { debugPanel.accessibilityHidden(isParticipantSession) }
 
             Button(role: .destructive) {
-                session.end()
-                hasEnded = true
+                if isParticipantSession { confirmingEnd = true }
+                else { finishWalk() }
             } label: {
                 Text("End Walk")
                     .font(.headline)
@@ -198,9 +226,34 @@ struct ActiveWalkView: View {
                     .padding(.vertical, 6)
             }
             .buttonStyle(.bordered)
+            .accessibilityFocused($endButtonFocused)
+            .accessibilityIdentifier("walk.end")
         }
         .padding()
         .background(.thinMaterial)
+    }
+
+    private var accessibilitySnapshot: ParticipantWalkAnnouncements.Snapshot {
+        ParticipantWalkAnnouncements.Snapshot(session: session)
+    }
+
+    private func announceParticipantUpdates() {
+        guard isParticipantSession, !hasEnded, scenePhase == .active,
+              UIAccessibility.isVoiceOverRunning else { return }
+        let messages = announcements.messages(for: accessibilitySnapshot)
+        guard !messages.isEmpty else { return }
+        // The policy waits for our recorded/TTS queue to drain. Queue behind
+        // any existing VoiceOver speech as well, without moving its focus.
+        let speech = NSAttributedString(string: messages.joined(separator: " "), attributes: [
+            .accessibilitySpeechQueueAnnouncement: true
+        ])
+        UIAccessibility.post(notification: .announcement, argument: speech)
+    }
+
+    private func finishWalk() {
+        guard !hasEnded else { return }
+        hasEnded = true
+        session.end()
     }
 
     /// Failsafe for a geofence that does not fire.

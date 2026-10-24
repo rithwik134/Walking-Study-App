@@ -49,6 +49,8 @@
 		D93332D6C1DA41FBBB500E9C /* SelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE9E018DEBB4C89BDF3AA36 /* SelectView.swift */; };
 		54FE323CDE4F4FAD8DF91C15 /* ParticipantHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08546900D9F648B082E4484F /* ParticipantHomeView.swift */; };
 		A5E1B11E885040CD8D03594C /* ParticipantSetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 573168FF971A4071B9A33B37 /* ParticipantSetupTests.swift */; };
+		C4414652D67B4D49A020CAC1 /* ParticipantWalkAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40E990DBD80465F8F348057 /* ParticipantWalkAccessibility.swift */; };
+		AB3D40286D0A4BB09F915E77 /* ParticipantWalkAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019EEB62CF1945C6B358F3F9 /* ParticipantWalkAccessibilityTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -107,6 +109,8 @@
 		ADE9E018DEBB4C89BDF3AA36 /* SelectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectView.swift; sourceTree = "<group>"; };
 		08546900D9F648B082E4484F /* ParticipantHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantHomeView.swift; sourceTree = "<group>"; };
 		573168FF971A4071B9A33B37 /* ParticipantSetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantSetupTests.swift; sourceTree = "<group>"; };
+		A40E990DBD80465F8F348057 /* ParticipantWalkAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantWalkAccessibility.swift; sourceTree = "<group>"; };
+		019EEB62CF1945C6B358F3F9 /* ParticipantWalkAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantWalkAccessibilityTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,6 +196,7 @@
 		AABB05223344556677889904 /* WayWalkResearchTests */ = {
 			isa = PBXGroup;
 			children = (
+				019EEB62CF1945C6B358F3F9 /* ParticipantWalkAccessibilityTests.swift */,
 				573168FF971A4071B9A33B37 /* ParticipantSetupTests.swift */,
 				AABB03223344556677889902 /* RouteDataTests.swift */,
 				BB010000000000000000000B /* SessionLoggerTests.swift */,
@@ -215,6 +220,7 @@
 		BB0300000000000000000002 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				A40E990DBD80465F8F348057 /* ParticipantWalkAccessibility.swift */,
 				BB0100000000000000000007 /* WaypointPreviewCard.swift */,
 				BB0100000000000000000008 /* WaypointMapContent.swift */,
 				BB0100000000000000000011 /* WalkStatusBanner.swift */,
@@ -373,6 +379,7 @@
 				A3CA67DF8F1D431CA432C72C /* WalkSession.swift in Sources */,
 				BB0200000000000000000013 /* LocationProviding.swift in Sources */,
 				1A2AE7453714412D85928118 /* HomeView.swift in Sources */,
+				C4414652D67B4D49A020CAC1 /* ParticipantWalkAccessibility.swift in Sources */,
 				54FE323CDE4F4FAD8DF91C15 /* ParticipantHomeView.swift in Sources */,
 				D93332D6C1DA41FBBB500E9C /* SelectView.swift in Sources */,
 				F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */,
@@ -398,6 +405,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AABB04223344556677889903 /* RouteDataTests.swift in Sources */,
+				AB3D40286D0A4BB09F915E77 /* ParticipantWalkAccessibilityTests.swift in Sources */,
 				A5E1B11E885040CD8D03594C /* ParticipantSetupTests.swift in Sources */,
 				BB020000000000000000000B /* SessionLoggerTests.swift in Sources */,
 				BB020000000000000000000C /* RoutePathTests.swift in Sources */,
