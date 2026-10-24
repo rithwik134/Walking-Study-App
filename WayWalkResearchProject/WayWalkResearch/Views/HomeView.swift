@@ -56,76 +56,74 @@ struct HomeView: View {
     private var selectedWalk: Walk? { walks[selectedWalkID] }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                participantSection
-                routeSection
-                conditionSection
+        Form {
+            participantSection
+            routeSection
+            conditionSection
 
-                modesSection
+            modesSection
 
-                if let loadError {
-                    Section {
-                        Label(loadError, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
-                            .font(.footnote)
-                    }
+            if let loadError {
+                Section {
+                    Label(loadError, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                        .font(.footnote)
                 }
             }
-            .navigationTitle("WayWalk Research")
-            // Inline rather than large: a large title costs roughly a third of
-            // the screen here, which pushed the test-mode toggle below the
-            // fold and reintroduced the scrolling this layout exists to avoid.
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                // Secondary navigation — both are used either side of a walk,
-                // never during setup, so they do not belong in the flow.
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showingMap = true
-                    } label: {
-                        Image(systemName: "map")
-                    }
-                    .accessibilityLabel("View route map")
+        }
+        .navigationTitle("WayWalk Research")
+        // Inline rather than large: a large title costs roughly a third of
+        // the screen here, which pushed the test-mode toggle below the
+        // fold and reintroduced the scrolling this layout exists to avoid.
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Secondary navigation — both are used either side of a walk,
+            // never during setup, so they do not belong in the flow.
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    showingMap = true
+                } label: {
+                    Image(systemName: "map")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SessionsView()
-                    } label: {
-                        Image(systemName: "tray.full")
-                    }
-                    .accessibilityLabel("Past sessions")
+                .accessibilityLabel("View route map")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    SessionsView()
+                } label: {
+                    Image(systemName: "tray.full")
                 }
+                .accessibilityLabel("Past sessions")
             }
-            .safeAreaInset(edge: .bottom) { startBar }
-            .onAppear {
-                session.requestPermission()
-                loadWalks()
-            }
-            .sheet(isPresented: $showingMap) {
-                RouteMapView()
-            }
-            .onChange(of: testModeEnabled) { _, isOn in
-                if isOn { manualModeEnabled = false }
-            }
-            .onChange(of: manualModeEnabled) { _, isOn in
-                if isOn { testModeEnabled = false }
-            }
-            .fullScreenCover(isPresented: $showingActiveWalk) {
-                if let loadedWalk {
-                    switch mode {
-                    case .test:
-                        WaypointTestView(session: session, walk: loadedWalk) {
-                            showingActiveWalk = false
-                        }
-                    case .manual:
-                        ManualWalkView(session: session, walk: loadedWalk) {
-                            showingActiveWalk = false
-                        }
-                    case .study:
-                        ActiveWalkView(session: session, walk: loadedWalk) {
-                            showingActiveWalk = false
-                        }
+        }
+        .safeAreaInset(edge: .bottom) { startBar }
+        .onAppear {
+            session.requestPermission()
+            loadWalks()
+        }
+        .sheet(isPresented: $showingMap) {
+            RouteMapView()
+        }
+        .onChange(of: testModeEnabled) { _, isOn in
+            if isOn { manualModeEnabled = false }
+        }
+        .onChange(of: manualModeEnabled) { _, isOn in
+            if isOn { testModeEnabled = false }
+        }
+        .fullScreenCover(isPresented: $showingActiveWalk) {
+            if let loadedWalk {
+                switch mode {
+                case .test:
+                    WaypointTestView(session: session, walk: loadedWalk) {
+                        showingActiveWalk = false
+                    }
+                case .manual:
+                    ManualWalkView(session: session, walk: loadedWalk) {
+                        showingActiveWalk = false
+                    }
+                case .study:
+                    ActiveWalkView(session: session, walk: loadedWalk) {
+                        showingActiveWalk = false
                     }
                 }
             }
@@ -311,12 +309,13 @@ struct HomeView: View {
             walk: walk,
             informationLevel: selectedLevel,
             participantID: trimmedParticipantID,
-            mode: mode
+            mode: mode,
+            requiresManualFirstTrigger: true
         )
         showingActiveWalk = true
     }
 }
 
 #Preview {
-    HomeView()
+    NavigationStack { HomeView() }
 }

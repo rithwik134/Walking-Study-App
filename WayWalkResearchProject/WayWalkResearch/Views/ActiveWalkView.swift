@@ -13,6 +13,7 @@ import UIKit
 struct ActiveWalkView: View {
     @ObservedObject var session: WalkSession
     let walk: Walk
+    var isParticipantSession = false
     var onEnd: () -> Void
 
     @State private var showDebug = false

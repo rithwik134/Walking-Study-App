@@ -4,7 +4,11 @@ import SwiftUI
 struct WayWalkResearchApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            SelectView {
+                HomeView()
+            } participant: {
+                ParticipantHomeView()
+            }
         }
     }
 }

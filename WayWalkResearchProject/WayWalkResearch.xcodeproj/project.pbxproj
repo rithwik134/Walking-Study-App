@@ -47,6 +47,8 @@
 		F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0E39836DF74552A5A0BC6C /* ActiveWalkView.swift */; };
 		CC0100000000000000000001 /* RecordedWaypointAudio in Resources */ = {isa = PBXBuildFile; fileRef = CC0200000000000000000001 /* RecordedWaypointAudio */; };
 		D93332D6C1DA41FBBB500E9C /* SelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE9E018DEBB4C89BDF3AA36 /* SelectView.swift */; };
+		54FE323CDE4F4FAD8DF91C15 /* ParticipantHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08546900D9F648B082E4484F /* ParticipantHomeView.swift */; };
+		A5E1B11E885040CD8D03594C /* ParticipantSetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 573168FF971A4071B9A33B37 /* ParticipantSetupTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +105,8 @@
 		F75DF2887B7C408690FF61EE /* WaypointTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaypointTestView.swift; sourceTree = "<group>"; };
 		CC0200000000000000000001 /* RecordedWaypointAudio */ = {isa = PBXFileReference; lastKnownFileType = folder; path = RecordedWaypointAudio; sourceTree = "<group>"; };
 		ADE9E018DEBB4C89BDF3AA36 /* SelectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectView.swift; sourceTree = "<group>"; };
+		08546900D9F648B082E4484F /* ParticipantHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantHomeView.swift; sourceTree = "<group>"; };
+		573168FF971A4071B9A33B37 /* ParticipantSetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantSetupTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,6 +130,7 @@
 		05267C18D91D458AAFBB4EE8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				08546900D9F648B082E4484F /* ParticipantHomeView.swift */,
 				ADE9E018DEBB4C89BDF3AA36 /* SelectView.swift */,
 				BB0300000000000000000002 /* Components */,
 				42D80C25C1964EBC80BDBED4 /* HomeView.swift */,
@@ -187,6 +192,7 @@
 		AABB05223344556677889904 /* WayWalkResearchTests */ = {
 			isa = PBXGroup;
 			children = (
+				573168FF971A4071B9A33B37 /* ParticipantSetupTests.swift */,
 				AABB03223344556677889902 /* RouteDataTests.swift */,
 				BB010000000000000000000B /* SessionLoggerTests.swift */,
 				BB010000000000000000000C /* RoutePathTests.swift */,
@@ -367,6 +373,7 @@
 				A3CA67DF8F1D431CA432C72C /* WalkSession.swift in Sources */,
 				BB0200000000000000000013 /* LocationProviding.swift in Sources */,
 				1A2AE7453714412D85928118 /* HomeView.swift in Sources */,
+				54FE323CDE4F4FAD8DF91C15 /* ParticipantHomeView.swift in Sources */,
 				D93332D6C1DA41FBBB500E9C /* SelectView.swift in Sources */,
 				F968085062E54B57A2BBD7E4 /* ActiveWalkView.swift in Sources */,
 				08A6AAAC58A64BD78D60D6B5 /* RouteMapView.swift in Sources */,
@@ -391,6 +398,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AABB04223344556677889903 /* RouteDataTests.swift in Sources */,
+				A5E1B11E885040CD8D03594C /* ParticipantSetupTests.swift in Sources */,
 				BB020000000000000000000B /* SessionLoggerTests.swift in Sources */,
 				BB020000000000000000000C /* RoutePathTests.swift in Sources */,
 				BB0200000000000000000012 /* ClosestApproachTests.swift in Sources */,
