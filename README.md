@@ -35,7 +35,7 @@ xcodebuild test -project WayWalkResearch.xcodeproj -scheme WayWalkResearch \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-146 XCTest methods, no simulator location or network required — `WalkSession` is
+The XCTest suite requires no simulator location or network — `WalkSession` is
 driven through the `LocationProviding` protocol with a stand-in that emits
 only the fixes a test hands it. Covers the CSV (`SessionLoggerTests`), the
 distance columns (`ClosestApproachTests`), the two-stage trigger and both
@@ -73,8 +73,10 @@ WayWalkResearch/
   Routing/
     RoutePathBuilder.swift       ← authoring-time MKDirections path generator
   Views/
-    HomeView.swift                ← Participant / Select Walk / Information Level / Start
-    ActiveWalkView.swift          ← researcher screen during a walk: map, prompt, flags
+    SelectView.swift              ← Researcher / Participant entry and setup navigation
+    ParticipantHomeView.swift     ← accessible ID entry, four walks and launch confirmation
+    HomeView.swift                ← researcher participant ID / route / condition / modes
+    ActiveWalkView.swift          ← walk screen with participant-specific accessibility
     RouteMapView.swift            ← MapKit overview of one walk at a time, for checking
     WaypointTestView.swift        ← live waypoint test mode
     ManualWalkView.swift          ← manual mode: researcher cues each prompt
@@ -83,6 +85,7 @@ WayWalkResearch/
     Components/
       WaypointPreviewCard.swift   ← the waypoint detail card shared by all three maps
       WaypointMapContent.swift    ← waypoints, radii and route line, shared by all three maps
+      ParticipantWalkAccessibility.swift ← completion/failure announcement policy
       WalkStatusBanner.swift      ← floating "Playing…" / "Walk ended" status pill
   Assets.xcassets/                ← AppIcon and AccentColor
   Info.plist
@@ -98,6 +101,67 @@ reference, build file, group, and the target's Sources/Resources phase) or
 Xcode will not compile them — this project does not use file-system
 synchronized groups. `RecordedWaypointAudio/` is the one exception: it is a
 folder reference, so MP3s dropped in there are picked up automatically.
+
+## Researcher and participant entry
+
+Every fresh launch opens **Choose your role**. **Researcher** opens the existing
+setup, test/manual modes, route map and session export tools. **Participant**
+opens a VoiceOver-friendly menu with an ID field and four route/condition
+choices. Use the ID assigned by the researcher, not a name. The ID remains
+while this participant menu is open (including between walks), but is cleared
+when returning to role selection or restarting the app.
+
+Selecting a walk opens a confirmation sheet with the ID, condition, start and
+destination. **Cancel** creates no session file. **Start walk** begins recording
+only after confirmation is dismissed. A blank ID, unavailable route or missing
+location authorization prevents starting. Denied permission offers **Open
+Settings** from the menu. When In Use authorization is accepted, matching the
+existing app; use **Always** for the documented locked-screen study procedure.
+
+Walk A starts at **UCL Main Entrance** and ends at **Central House**; Walk B
+reverses those endpoints. Participants must reach the starting place themselves:
+this app does not give directions to it. The first instruction plays when GPS
+confirmation or a backstop delivers the first waypoint.
+
+### VoiceOver during setup and walking
+
+Enable VoiceOver using the iPhone's accessibility settings. Swipe between
+controls and double-tap to activate; touch exploration also works. The menus
+use full labels, standard controls, headings and scrolling text that adapts to
+Dynamic Type. No separate menu narration is played over VoiceOver.
+
+Participant walks retain the visual researcher layout, but the map, transcript,
+debug data, counters, flags and manual cue controls are excluded from
+accessibility navigation. The stable **Walk in progress** title and **End Walk**
+remain accessible. Ending requires confirmation; **Continue walking** cancels
+without ending or restarting the session. The summary and **Done** return to
+the participant menu. Researcher walks keep their existing controls.
+
+Waypoint recordings remain the normal spoken output. Routine GPS/waypoint
+updates do not post VoiceOver announcements. Completion is announced once,
+after the entire recorded/TTS prompt queue drains; use **End Walk** to finish
+recording and review the summary. Persistent location, permission and recording
+failures are exposed accessibly and announced once per occurrence, after any
+pending prompt audio finishes. Resolved failures are not announced later.
+Announcements are posted while the app is foregrounded and VoiceOver is on;
+current failures/completion are checked again when returning to the app.
+VoiceOver can still speak on interaction, screen transitions and system events.
+
+Participant launches are ordinary `study` sessions. CSV columns and enum values
+are unchanged; there is no role column, so record who operated the app in the
+study's external session records when that distinction matters.
+
+### Accessibility validation before independent use
+
+Automated tests cover launch validation/cancellation, all four condition routes,
+first-trigger policy, and completion/failure announcement timing. Simulator
+interface checks do not establish physical-device VoiceOver speech behaviour.
+Before independent participant use, validate on a physical iPhone with VoiceOver
+and Screen Curtain, including start/first-recording overlap, ending during
+playback, completion after the final recording, permission errors, and returning
+from confirmation. Check the largest Dynamic Type sizes, light/dark appearance,
+Increase Contrast and feedback from a blind VoiceOver user. Physical-device
+speech checks and participant feedback remain outstanding for this change.
 
 ## Editing routes
 
@@ -182,12 +246,18 @@ Three timing details worth knowing:
   trigger decision used an old position, not necessarily where they were when
   it sounded. Blank means no fix was known at all.
 
-### The first waypoint is always manually triggered
+### The first waypoint depends on who starts the walk
 
-The first waypoint on every walk is always manually triggered — the researcher
-presses the green **Play waypoint 1** button to begin the route. This ensures
-the participant is ready before the first prompt plays. Subsequent waypoints
-fire automatically as normal.
+Researcher study and test sessions require the researcher to press the green
+**Start: Play waypoint 1** button. Subsequent waypoints fire automatically.
+Manual Mode continues to require a button press for every waypoint.
+
+Participant sessions remove this first-waypoint gate. The first on-route
+waypoint uses the same GPS confirmation and backstops as later waypoints; it
+does not play merely because Start walk was pressed. These deliveries are
+logged as `automatic`, with the existing `backstop:` note when applicable.
+`WalkSession.start(requiresManualFirstTrigger:)` defaults to `true` to preserve
+researcher behaviour; participant setup explicitly passes `false`.
 
 ### Forced prompts are marked
 
@@ -346,7 +416,7 @@ already on disk.
 
 ### Non-study runs are marked
 
-The Home screen has a **Modes** section with two mutually exclusive toggles.
+The Researcher Home screen has a **Modes** section with two mutually exclusive toggles.
 Both still record a session — they have to, or you could not check that logging
 works before a real walk — so both are marked twice over, to stop either being
 mistaken for participant data later:
@@ -510,7 +580,7 @@ expected: the line is drawn over both condition branches at once (below).
 
 ## Recorded audio
 
-`HomeView` runs on `RecordedAudioPromptPlayer` by default — real waypoint
+`HomeView` and `ParticipantHomeView` run on `RecordedAudioPromptPlayer` by default — real waypoint
 recordings, not synthesised speech. It looks up `<id>_nav.mp3` /
 `<id>_context.mp3` in `WayWalkResearch/Audio/RecordedWaypointAudio/` (a
 folder reference, so a new MP3 dropped in there is picked up on the next
@@ -522,7 +592,8 @@ MP3s. `RouteDataTests.testEveryOnRouteWaypointHasItsRecording` checks this.
 Both players implement the same `AudioPromptPlaying` protocol, so the
 triggering logic, Home screen, and active-walk screen never know or care
 which one is in use. To run on pure TTS instead — e.g. no recordings have
-been made yet — change the one line in `HomeView`:
+been made yet — change the session initializer in both `HomeView` and
+`ParticipantHomeView`:
 
 ```swift
 @StateObject private var session = WalkSession(audioPlayer: SpeechPromptPlayer())
