@@ -254,13 +254,20 @@ private struct ParticipantConfirmationView: View {
                     if let problem = setup.startProblem(for: choice, authorization: session.authorizationStatus) {
                         Text(problem).foregroundStyle(.red)
                     }
-                    Button("Start walk") { setup.confirm(authorization: session.authorizationStatus) }
-                        .buttonStyle(.borderedProminent)
-                        .frame(minHeight: 60)
-                        .disabled(setup.startProblem(for: choice, authorization: session.authorizationStatus) != nil)
-                        .accessibilityIdentifier("participant.start")
-                    Button("Cancel") { setup.cancel() }
-                        .frame(minHeight: 44)
+                    Button {
+                        setup.confirm(authorization: session.authorizationStatus)
+                    } label: {
+                        Text("Start walk")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(setup.startProblem(for: choice, authorization: session.authorizationStatus) != nil)
+                    .accessibilityIdentifier("participant.start")
+                    Button { setup.cancel() } label: {
+                        Text("Cancel").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
