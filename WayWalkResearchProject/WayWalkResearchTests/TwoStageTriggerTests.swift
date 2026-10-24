@@ -20,14 +20,16 @@ final class TwoStageTriggerTests: XCTestCase {
 
     private func startSession(
         mode: SessionMode = .test,
-        tuning: TriggerTuning = TriggerTuning()
+        tuning: TriggerTuning = TriggerTuning(),
+        requiresManualFirstTrigger: Bool = true
     ) throws {
         player = FakePromptPlayer()
         manager = SilentLocationManager()
         session = WalkSession(audioPlayer: player, locationManager: manager, tuning: tuning)
         walk = try XCTUnwrap(RouteDataStore.shared.loadWalk(.walkA))
         session.start(walk: walk, informationLevel: .navigationOnly,
-                      participantID: "TWOSTAGE", mode: mode)
+                      participantID: "TWOSTAGE", mode: mode,
+                      requiresManualFirstTrigger: requiresManualFirstTrigger)
     }
 
     /// Clears the first-waypoint manual-trigger gate by playing the current
@@ -556,6 +558,98 @@ final class TwoStageTriggerTests: XCTestCase {
 
         session.playCurrentWaypoint()
         XCTAssertEqual(triggerRows.map(\.waypointID), ["a1", "a3"])
+    }
+
+    // MARK: - Participant launch
+
+    func testParticipantFirstWaypointNeedsAccurateConfirmation() async throws {
+        try startSession(mode: .study, requiresManualFirstTrigger: false)
+        XCTAssertFalse(session.awaitingFirstManualTrigger)
+        manager.simulateEnter()
+        await settle()
+        XCTAssertTrue(triggerRows.isEmpty, "wake entry still cannot deliver")
+        await deliver([fix(wp1, metres: 3, accuracy: 40), fix(wp1, metres: 3, accuracy: 40)])
+        XCTAssertTrue(triggerRows.isEmpty)
+        await deliver([fix(wp1, metres: 3)])
+        XCTAssertTrue(triggerRows.isEmpty, "one qualifying fix is insufficient")
+        await deliver([fix(wp1, metres: 30), fix(wp1, metres: 3)])
+        XCTAssertTrue(triggerRows.isEmpty, "an outside fix resets confirmation")
+        await deliver([fix(wp1, metres: 3)])
+        XCTAssertEqual(triggerRows.map(\.waypointID), [wp1.id])
+        XCTAssertEqual(triggerRows.first?.triggerSource, .automatic)
+        XCTAssertNil(triggerRows.first?.note)
+        XCTAssertEqual(session.currentWaypointNumber, wp2.order, "skip off-route a2")
+    }
+
+    func testParticipantFirstWaypointWakeExitBackstop() async throws {
+        try startSession(mode: .study, requiresManualFirstTrigger: false)
+        manager.simulateEnter()
+        await settle()
+        await deliver([fix(wp1, metres: 40)])
+        manager.simulateExit()
+        await settle()
+        XCTAssertEqual(triggerRows.map(\.waypointID), [wp1.id])
+        XCTAssertEqual(triggerRows.first?.triggerSource, .automatic)
+        XCTAssertEqual(triggerRows.first?.note, "backstop: wake_exit")
+    }
+
+    func testParticipantFirstWaypointRecedeBackstop() async throws {
+        try startSession(mode: .study, requiresManualFirstTrigger: false)
+        await deliver([fix(wp1, metres: 20, accuracy: 40),
+                       fix(wp1, metres: 80, accuracy: 40),
+                       fix(wp1, metres: 85, accuracy: 40)])
+        XCTAssertEqual(triggerRows.map(\.waypointID), [wp1.id])
+        XCTAssertEqual(triggerRows.first?.triggerSource, .automatic)
+        XCTAssertEqual(triggerRows.first?.note, "backstop: receded")
+    }
+
+    func testManualModeRemainsManualWhenFirstGateIsDisabled() async throws {
+        try startSession(mode: .manual, requiresManualFirstTrigger: false)
+        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 3),
+                       fix(wp1, metres: 80), fix(wp1, metres: 85)])
+        manager.simulateEnter()
+        await settle()
+        manager.simulateExit()
+        await settle()
+        XCTAssertTrue(triggerRows.isEmpty)
+        session.playCurrentWaypoint()
+        XCTAssertEqual(triggerRows.first?.triggerSource, .manual)
+    }
+
+    func testRestartReappliesFirstTriggerPolicy() async throws {
+        try startSession(mode: .study, requiresManualFirstTrigger: false)
+        await deliver([fix(wp1, metres: 3)])
+        session.end()
+        session.start(walk: walk, informationLevel: .navigationOnly, participantID: "RESEARCHER")
+        XCTAssertTrue(session.awaitingFirstManualTrigger)
+        await deliver([fix(wp1, metres: 3), fix(wp1, metres: 3)])
+        XCTAssertTrue(triggerRows.isEmpty)
+        session.end()
+        session.start(walk: walk, informationLevel: .navigationOnly, participantID: "PARTICIPANT",
+                      requiresManualFirstTrigger: false)
+        await deliver([fix(wp1, metres: 3)])
+        XCTAssertTrue(triggerRows.isEmpty, "restart must clear previous confirmation")
+        await deliver([fix(wp1, metres: 3)])
+        XCTAssertEqual(triggerRows.count, 1)
+    }
+
+    func testParticipantLaunchWalksAllFourConditionRoutes() async throws {
+        for id in WalkID.allCases {
+            let route = try XCTUnwrap(RouteDataStore.shared.loadWalk(id))
+            for level in InformationLevel.allCases {
+                session.end()
+                session.start(walk: route, informationLevel: level,
+                              participantID: "PARTICIPANT-\(id.rawValue)-\(level.shortName)",
+                              requiresManualFirstTrigger: false)
+                let onRoute = route.waypoints.filter { $0.isOnRoute(for: level) }
+                for waypoint in onRoute {
+                    await deliver([fix(waypoint, metres: 1), fix(waypoint, metres: 1)])
+                }
+                XCTAssertEqual(triggerRows.map(\.waypointID), onRoute.map { Optional($0.id) })
+                XCTAssertTrue(triggerRows.allSatisfy { $0.triggerSource == .automatic })
+                XCTAssertTrue(session.routeIsComplete)
+            }
+        }
     }
 
     // MARK: - First waypoint requires manual trigger

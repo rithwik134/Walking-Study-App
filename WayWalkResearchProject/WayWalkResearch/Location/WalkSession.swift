@@ -197,7 +197,8 @@ final class WalkSession: NSObject, ObservableObject {
 
     /// Whether the session is waiting for the researcher to manually trigger
     /// the first waypoint. True from `start()` until the first waypoint is
-    /// delivered, in study and test modes only. While true, the automatic
+    /// delivered, in researcher study and test sessions only. Participant
+    /// sessions opt out at start. While true, the automatic
     /// trigger path and both backstops are suppressed identically to manual
     /// mode, but `isInsideCurrentRadius` and `isConfirmingArrival` still
     /// update so the researcher can see arrival.
@@ -334,7 +335,8 @@ final class WalkSession: NSObject, ObservableObject {
         walk: Walk,
         informationLevel: InformationLevel,
         participantID: String,
-        mode: SessionMode = .study
+        mode: SessionMode = .study,
+        requiresManualFirstTrigger: Bool = true
     ) {
         walkQueue = walk.waypoints
         currentIndex = 0
@@ -362,7 +364,7 @@ final class WalkSession: NSObject, ObservableObject {
         )
         self.logger = logger
         sessionMode = mode
-        awaitingFirstManualTrigger = (mode != .manual)
+        awaitingFirstManualTrigger = mode != .manual && requiresManualFirstTrigger
         reportLoggingState()
 
         for region in locationManager.monitoredRegions {
